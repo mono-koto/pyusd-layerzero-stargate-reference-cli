@@ -1,0 +1,11 @@
+{
+  "mainnet": [
+    "ethereum",
+    "arbitrum",
+    "polygon"
+  ],
+  "testnet": [
+    "sepolia",
+    "arbitrum-sepolia"
+  ]
+}

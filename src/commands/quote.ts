@@ -1,130 +1,93 @@
-import {Args, Command, Flags} from '@oclif/core'
+import { Command } from '@commander-js/extra-typings'
 
-import type {SendParam} from '../types/index.js'
+import type { SendParam } from '../types/index'
 
-import {getChainConfig} from '../lib/chains.js'
-import {createPublicClientForChain, getAddressFromPrivateKey} from '../lib/client.js'
-import {quoteSend} from '../lib/oft.js'
-import {buildLzReceiveOptions, DEFAULT_GAS_LIMIT} from '../lib/options.js'
-import {addressToBytes32} from '../utils/address.js'
-import {calculateMinAmount, formatAmount, formatNativeFee, parseAmount} from '../utils/format.js'
+import { getChainConfig } from '../lib/chains'
+import { createPublicClientForChain, getAddressFromPrivateKey } from '../lib/client'
+import { quoteSend } from '../lib/oft'
+import { buildLzReceiveOptions, DEFAULT_GAS_LIMIT } from '../lib/options'
+import { addressToBytes32 } from '../utils/address'
+import { calculateMinAmount, formatAmount, formatNativeFee, parseAmount } from '../utils/format'
 
-export default class Quote extends Command {
-  static args = {
-    amount: Args.string({
-      description: 'Amount of PYUSD to transfer',
-      required: true,
-    }),
-    destination: Args.string({
-      description: 'Destination chain',
-      required: true,
-    }),
-    source: Args.string({
-      description: 'Source chain (e.g., ethereum, arbitrum, polygon)',
-      required: true,
-    }),
-  }
-static description = 'Get a fee quote for a PYUSD cross-chain transfer'
-static examples = [
-    '<%= config.bin %> quote ethereum arbitrum 100',
-    '<%= config.bin %> quote arbitrum polygon 50.5 --to 0x1234...',
-    '<%= config.bin %> quote ethereum polygon 25 --slippage 1',
-  ]
-static flags = {
-    gas: Flags.integer({
-      default: Number(DEFAULT_GAS_LIMIT),
-      description: 'Gas limit for destination lzReceive',
-    }),
-    slippage: Flags.string({
-      default: '0.5',
-      description: 'Slippage tolerance in percent',
-    }),
-    to: Flags.string({
-      description: 'Recipient address on destination chain (defaults to sender)',
-    }),
-  }
+export const quoteCommand = new Command('quote')
+  .description('Get a fee quote for a PYUSD cross-chain transfer')
+  .argument('<source>', 'Source chain (e.g., ethereum, arbitrum, polygon)')
+  .argument('<destination>', 'Destination chain')
+  .argument('<amount>', 'Amount of PYUSD to transfer')
+  .option('--to <address>', 'Recipient address on destination chain (defaults to sender)')
+  .option('--slippage <percent>', 'Slippage tolerance in percent', '0.5')
+  .option('--gas <limit>', 'Gas limit for destination lzReceive', String(DEFAULT_GAS_LIMIT))
+  .action(async (source, destination, amount, options) => {
+    const srcConfig = getChainConfig(source)
+    const dstConfig = getChainConfig(destination)
 
-  async run(): Promise<void> {
-    const {args, flags} = await this.parse(Quote)
-
-    // Get chain configs
-    const srcConfig = getChainConfig(args.source)
-    const dstConfig = getChainConfig(args.destination)
-
-    // Parse amount
-    const amountLD = parseAmount(args.amount)
-    const slippagePercent = Number.parseFloat(flags.slippage)
+    const amountLD = parseAmount(amount)
+    const slippagePercent = Number.parseFloat(options.slippage)
     const minAmountLD = calculateMinAmount(amountLD, slippagePercent)
 
-    // Determine recipient address
     let recipientAddress: `0x${string}`
-    if (flags.to) {
-      recipientAddress = flags.to as `0x${string}`
+    if (options.to) {
+      recipientAddress = options.to as `0x${string}`
     } else {
-      const privateKey = process.env.PYUSD_PRIVATE_KEY
+      const privateKey = process.env.PRIVATE_KEY
       if (!privateKey) {
-        this.error('Either --to flag or PYUSD_PRIVATE_KEY environment variable is required')
+        console.error('Error: Either --to flag or PRIVATE_KEY environment variable is required')
+        process.exit(1)
       }
-
       recipientAddress = getAddressFromPrivateKey(privateKey as `0x${string}`)
     }
 
-    // Build send parameters
     const sendParam: SendParam = {
       amountLD,
       composeMsg: '0x',
       dstEid: dstConfig.eid,
-      extraOptions: buildLzReceiveOptions(BigInt(flags.gas)),
+      extraOptions: buildLzReceiveOptions(BigInt(options.gas)),
       minAmountLD,
       oftCmd: '0x',
       to: addressToBytes32(recipientAddress),
     }
 
-    // Create client and get quote
-    const client = createPublicClientForChain(args.source)
+    const client = createPublicClientForChain(source)
 
-    this.log('')
-    this.log('PYUSD Transfer Quote')
-    this.log('─'.repeat(50))
+    console.log('')
+    console.log('PYUSD Transfer Quote')
+    console.log('─'.repeat(50))
 
     try {
       const quote = await quoteSend(client, srcConfig.pyusdAddress, sendParam)
 
-      // Display results
-      this.log(`Source:         ${srcConfig.name} (EID: ${srcConfig.eid})`)
-      this.log(`Destination:    ${dstConfig.name} (EID: ${dstConfig.eid})`)
-      this.log(`Recipient:      ${recipientAddress}`)
-      this.log(`Amount:         ${args.amount} PYUSD`)
-      this.log('')
-      this.log('Fees')
-      this.log('─'.repeat(50))
-      this.log(`LayerZero Fee:  ${formatNativeFee(quote.messagingFee.nativeFee, srcConfig.nativeCurrency.symbol)}`)
+      console.log(`Source:         ${srcConfig.name} (EID: ${srcConfig.eid})`)
+      console.log(`Destination:    ${dstConfig.name} (EID: ${dstConfig.eid})`)
+      console.log(`Recipient:      ${recipientAddress}`)
+      console.log(`Amount:         ${amount} PYUSD`)
+      console.log('')
+      console.log('Fees')
+      console.log('─'.repeat(50))
+      console.log(`LayerZero Fee:  ${formatNativeFee(quote.messagingFee.nativeFee, srcConfig.nativeCurrency.symbol)}`)
 
       if (quote.feeDetails.length > 0) {
         for (const fee of quote.feeDetails) {
-          this.log(`Protocol Fee:   ${formatAmount(fee.feeAmountLD)} PYUSD (${fee.description})`)
+          console.log(`Protocol Fee:   ${formatAmount(fee.feeAmountLD)} PYUSD (${fee.description})`)
         }
       }
 
-      this.log('')
-      this.log('Amounts')
-      this.log('─'.repeat(50))
-      this.log(`Amount Sent:     ${formatAmount(quote.receipt.amountSentLD)} PYUSD`)
-      this.log(`Amount Received: ${formatAmount(quote.receipt.amountReceivedLD)} PYUSD`)
-      this.log(`Min Received:    ${formatAmount(minAmountLD)} PYUSD (${flags.slippage}% slippage)`)
+      console.log('')
+      console.log('Amounts')
+      console.log('─'.repeat(50))
+      console.log(`Amount Sent:     ${formatAmount(quote.receipt.amountSentLD)} PYUSD`)
+      console.log(`Amount Received: ${formatAmount(quote.receipt.amountReceivedLD)} PYUSD`)
+      console.log(`Min Received:    ${formatAmount(minAmountLD)} PYUSD (${options.slippage}% slippage)`)
 
-      this.log('')
-      this.log('Limits')
-      this.log('─'.repeat(50))
-      this.log(`Min Transfer:   ${formatAmount(quote.limit.minAmountLD)} PYUSD`)
-      this.log(`Max Transfer:   ${formatAmount(quote.limit.maxAmountLD)} PYUSD`)
-      this.log('')
+      console.log('')
+      console.log('Limits')
+      console.log('─'.repeat(50))
+      console.log(`Min Transfer:   ${formatAmount(quote.limit.minAmountLD)} PYUSD`)
+      console.log(`Max Transfer:   ${formatAmount(quote.limit.maxAmountLD)} PYUSD`)
+      console.log('')
     } catch (error) {
       if (error instanceof Error) {
-        this.error(`Failed to get quote: ${error.message}`)
+        console.error(`Failed to get quote: ${error.message}`)
       }
-
-      throw error
+      process.exit(1)
     }
-  }
-}
+  })

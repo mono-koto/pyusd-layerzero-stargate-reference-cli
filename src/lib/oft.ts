@@ -1,19 +1,25 @@
 import type {Address, Hex, PublicClient, WalletClient} from 'viem'
 
-import type {MessagingFee, QuoteResult, SendParam} from '../types/index.js'
+import type {MessagingFee, QuoteResult, SendParam} from '../types/index'
 
-import {erc20Abi} from './abi/erc20.js'
-import {ioftAbi} from './abi/ioft.js'
+import {erc20Abi} from './abi/erc20'
+import {ioftAbi} from './abi/ioft'
 
 /**
  * Get the underlying ERC20 token address for an OFT
+ * Falls back to the address itself if it's not an OFT adapter (e.g., raw token on testnet)
  */
 export async function getTokenAddress(client: PublicClient, oftAddress: Address): Promise<Address> {
-  return client.readContract({
-    abi: ioftAbi,
-    address: oftAddress,
-    functionName: 'token',
-  }) as Promise<Address>
+  try {
+    return await client.readContract({
+      abi: ioftAbi,
+      address: oftAddress,
+      functionName: 'token',
+    }) as Address
+  } catch {
+    // If token() doesn't exist, assume the address is the token itself
+    return oftAddress
+  }
 }
 
 /**

@@ -1,146 +1,108 @@
-import {Args, Command, Flags} from '@oclif/core'
+import { Command } from '@commander-js/extra-typings'
 
-import type {SendParam} from '../types/index.js'
+import type { SendParam } from '../types/index'
 
-import {getChainConfig} from '../lib/chains.js'
-import {createPublicClientForChain, createWalletClientForChain, getAddressFromPrivateKey} from '../lib/client.js'
-import {checkAndApprove, getBalance, getTokenAddress, quoteSend, send} from '../lib/oft.js'
-import {buildLzReceiveOptions, DEFAULT_GAS_LIMIT} from '../lib/options.js'
-import {addressToBytes32} from '../utils/address.js'
-import {calculateMinAmount, formatAmount, formatNativeFee, parseAmount, truncateAddress} from '../utils/format.js'
+import { getChainConfig } from '../lib/chains'
+import { createPublicClientForChain, createWalletClientForChain, getAddressFromPrivateKey } from '../lib/client'
+import { checkAndApprove, getBalance, getTokenAddress, quoteSend, send } from '../lib/oft'
+import { buildLzReceiveOptions, DEFAULT_GAS_LIMIT } from '../lib/options'
+import { addressToBytes32 } from '../utils/address'
+import { calculateMinAmount, formatAmount, formatNativeFee, parseAmount, truncateAddress } from '../utils/format'
 
-export default class Send extends Command {
-  static args = {
-    amount: Args.string({
-      description: 'Amount of PYUSD to transfer',
-      required: true,
-    }),
-    destination: Args.string({
-      description: 'Destination chain',
-      required: true,
-    }),
-    source: Args.string({
-      description: 'Source chain (e.g., ethereum, arbitrum, polygon)',
-      required: true,
-    }),
-  }
-static description = 'Execute a PYUSD cross-chain transfer'
-static examples = [
-    'PYUSD_PRIVATE_KEY=0x... <%= config.bin %> send ethereum arbitrum 100',
-    'PYUSD_PRIVATE_KEY=0x... <%= config.bin %> send arbitrum polygon 50 --to 0x1234...',
-    'PYUSD_PRIVATE_KEY=0x... <%= config.bin %> send ethereum polygon 25 --dry-run',
-  ]
-static flags = {
-    'dry-run': Flags.boolean({
-      default: false,
-      description: 'Simulate transaction without sending',
-    }),
-    gas: Flags.integer({
-      default: Number(DEFAULT_GAS_LIMIT),
-      description: 'Gas limit for destination lzReceive',
-    }),
-    slippage: Flags.string({
-      default: '0.5',
-      description: 'Slippage tolerance in percent',
-    }),
-    to: Flags.string({
-      description: 'Recipient address on destination chain (defaults to sender)',
-    }),
-  }
-
-  async run(): Promise<void> {
-    const {args, flags} = await this.parse(Send)
-
-    // Require private key
-    const privateKey = process.env.PYUSD_PRIVATE_KEY
+export const sendCommand = new Command('send')
+  .description('Execute a PYUSD cross-chain transfer')
+  .argument('<source>', 'Source chain (e.g., ethereum, arbitrum, polygon)')
+  .argument('<destination>', 'Destination chain')
+  .argument('<amount>', 'Amount of PYUSD to transfer')
+  .option('--to <address>', 'Recipient address on destination chain (defaults to sender)')
+  .option('--slippage <percent>', 'Slippage tolerance in percent', '0.5')
+  .option('--gas <limit>', 'Gas limit for destination lzReceive', String(DEFAULT_GAS_LIMIT))
+  .option('--dry-run', 'Simulate transaction without sending', false)
+  .action(async (source, destination, amount, options) => {
+    const privateKey = process.env.PRIVATE_KEY
     if (!privateKey) {
-      this.error('PYUSD_PRIVATE_KEY environment variable is required for sending')
+      console.error('Error: PRIVATE_KEY environment variable is required for sending')
+      process.exit(1)
     }
 
-    // Get chain configs
-    const srcConfig = getChainConfig(args.source)
-    const dstConfig = getChainConfig(args.destination)
+    const srcConfig = getChainConfig(source)
+    const dstConfig = getChainConfig(destination)
 
-    // Get sender address
     const senderAddress = getAddressFromPrivateKey(privateKey as `0x${string}`)
+    const recipientAddress = (options.to || senderAddress) as `0x${string}`
 
-    // Determine recipient
-    const recipientAddress = (flags.to || senderAddress) as `0x${string}`
-
-    // Parse amount
-    const amountLD = parseAmount(args.amount)
-    const slippagePercent = Number.parseFloat(flags.slippage)
+    const amountLD = parseAmount(amount)
+    const slippagePercent = Number.parseFloat(options.slippage)
     const minAmountLD = calculateMinAmount(amountLD, slippagePercent)
 
-    // Build send parameters
     const sendParam: SendParam = {
       amountLD,
       composeMsg: '0x',
       dstEid: dstConfig.eid,
-      extraOptions: buildLzReceiveOptions(BigInt(flags.gas)),
+      extraOptions: buildLzReceiveOptions(BigInt(options.gas)),
       minAmountLD,
       oftCmd: '0x',
       to: addressToBytes32(recipientAddress),
     }
 
-    // Create clients
-    const publicClient = createPublicClientForChain(args.source)
-    const walletClient = createWalletClientForChain(args.source, privateKey as `0x${string}`)
+    const publicClient = createPublicClientForChain(source)
+    const walletClient = createWalletClientForChain(source, privateKey as `0x${string}`)
 
-    this.log('')
-    this.log('PYUSD Cross-Chain Transfer')
-    this.log('─'.repeat(50))
-    this.log(`From:       ${srcConfig.name} → ${dstConfig.name}`)
-    this.log(`Sender:     ${truncateAddress(senderAddress)}`)
-    this.log(`Recipient:  ${truncateAddress(recipientAddress)}`)
-    this.log(`Amount:     ${args.amount} PYUSD`)
-    this.log('')
+    console.log('')
+    console.log('PYUSD Cross-Chain Transfer')
+    console.log('─'.repeat(50))
+    console.log(`From:       ${srcConfig.name} → ${dstConfig.name}`)
+    console.log(`Sender:     ${truncateAddress(senderAddress)}`)
+    console.log(`Recipient:  ${truncateAddress(recipientAddress)}`)
+    console.log(`Amount:     ${amount} PYUSD`)
+    console.log('')
 
     try {
       // Step 1: Check balance
-      this.log('Step 1/4: Checking balance...')
+      console.log('Step 1/4: Checking balance...')
       const tokenAddress = await getTokenAddress(publicClient, srcConfig.pyusdAddress)
       const balance = await getBalance(publicClient, tokenAddress, senderAddress)
 
       if (balance < amountLD) {
-        this.error(`Insufficient balance: have ${formatAmount(balance)} PYUSD, need ${args.amount} PYUSD`)
+        console.error(`Insufficient balance: have ${formatAmount(balance)} PYUSD, need ${amount} PYUSD`)
+        process.exit(1)
       }
 
-      this.log(`  ✓ Balance: ${formatAmount(balance)} PYUSD`)
-      this.log('')
+      console.log(`  ✓ Balance: ${formatAmount(balance)} PYUSD`)
+      console.log('')
 
       // Step 2: Check/set approval
-      this.log('Step 2/4: Checking approval...')
+      console.log('Step 2/4: Checking approval...')
       const approvalResult = await checkAndApprove(walletClient, publicClient, srcConfig.pyusdAddress, amountLD)
 
       if (approvalResult.approved) {
-        this.log(`  ✓ Approved (tx: ${truncateAddress(approvalResult.txHash!)})`)
+        console.log(`  ✓ Approved (tx: ${truncateAddress(approvalResult.txHash!)})`)
       } else {
-        this.log('  ✓ Sufficient allowance (no approval needed)')
+        console.log('  ✓ Sufficient allowance (no approval needed)')
       }
 
-      this.log('')
+      console.log('')
 
       // Step 3: Get quote
-      this.log('Step 3/4: Getting quote...')
+      console.log('Step 3/4: Getting quote...')
       const quote = await quoteSend(publicClient, srcConfig.pyusdAddress, sendParam)
-      this.log(`  ✓ Fee: ${formatNativeFee(quote.messagingFee.nativeFee, srcConfig.nativeCurrency.symbol)}`)
-      this.log(`  ✓ Will receive: ${formatAmount(quote.receipt.amountReceivedLD)} PYUSD`)
-      this.log('')
+      console.log(`  ✓ Fee: ${formatNativeFee(quote.messagingFee.nativeFee, srcConfig.nativeCurrency.symbol)}`)
+      console.log(`  ✓ Will receive: ${formatAmount(quote.receipt.amountReceivedLD)} PYUSD`)
+      console.log('')
 
       // Step 4: Send (or dry run)
-      if (flags['dry-run']) {
-        this.log('Step 4/4: Dry run (skipping actual send)')
-        this.log('  ✓ Transaction simulation successful')
-        this.log('')
-        this.log('─'.repeat(50))
-        this.log('Dry run complete. Remove --dry-run flag to execute.')
-        this.log('')
+      if (options.dryRun) {
+        console.log('Step 4/4: Dry run (skipping actual send)')
+        console.log('  ✓ Transaction simulation successful')
+        console.log('')
+        console.log('─'.repeat(50))
+        console.log('Dry run complete. Remove --dry-run flag to execute.')
+        console.log('')
         return
       }
 
-      this.log('Step 4/4: Sending transaction...')
-      const {guid, txHash} = await send(
+      console.log('Step 4/4: Sending transaction...')
+      const { guid, txHash } = await send(
         walletClient,
         publicClient,
         srcConfig.pyusdAddress,
@@ -149,27 +111,25 @@ static flags = {
         senderAddress,
       )
 
-      this.log(`  ✓ Transaction sent!`)
-      this.log('')
+      console.log(`  ✓ Transaction sent!`)
+      console.log('')
 
       // Display results
-      this.log('Results')
-      this.log('─'.repeat(50))
-      this.log(`TX Hash:      ${txHash}`)
-      this.log(`Explorer:     ${srcConfig.blockExplorer}/tx/${txHash}`)
+      console.log('Results')
+      console.log('─'.repeat(50))
+      console.log(`TX Hash:      ${txHash}`)
+      console.log(`Explorer:     ${srcConfig.blockExplorer}/tx/${txHash}`)
       if (guid !== '0x') {
-        this.log(`LayerZero:    https://layerzeroscan.com/tx/${txHash}`)
+        console.log(`LayerZero:    https://layerzeroscan.com/tx/${txHash}`)
       }
 
-      this.log('')
-      this.log('Status: Pending (check LayerZero scan for cross-chain delivery)')
-      this.log('')
+      console.log('')
+      console.log('Status: Pending (check LayerZero scan for cross-chain delivery)')
+      console.log('')
     } catch (error) {
       if (error instanceof Error) {
-        this.error(`Transaction failed: ${error.message}`)
+        console.error(`Transaction failed: ${error.message}`)
       }
-
-      throw error
+      process.exit(1)
     }
-  }
-}
+  })

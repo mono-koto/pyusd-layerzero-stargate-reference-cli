@@ -1,7 +1,7 @@
 import {createPublicClient, createWalletClient, http, type PublicClient, type WalletClient} from 'viem'
 import {privateKeyToAccount} from 'viem/accounts'
 
-import {getChainConfig, getViemChain} from './chains.js'
+import {getChainConfig, getViemChain} from './chains'
 
 /**
  * Create a public client for reading from a chain

@@ -1,76 +1,51 @@
 {
   "name": "pyusd-lz",
-  "description": "A new CLI generated with oclif",
+  "description": "CLI tool for cross-chain PYUSD transfers using LayerZero",
   "version": "0.0.0",
   "author": "burnto",
   "bin": {
-    "pyusd-lz": "./bin/run.js"
+    "pyusd-lz": "./bin/cli.ts"
   },
   "bugs": "https://github.com/pyusd-lz/pyusd-lz/issues",
   "dependencies": {
-    "@oclif/core": "^4",
-    "@oclif/plugin-help": "^6",
-    "@oclif/plugin-plugins": "^5",
-    "chalk": "^5.6.2",
+    "@commander-js/extra-typings": "^14.0.0",
+    "chalk": "^5.4.1",
+    "commander": "^14.0.0",
     "ora": "^9.0.0",
     "viem": "^2.43.5"
   },
   "devDependencies": {
     "@eslint/compat": "^1",
-    "@oclif/prettier-config": "^0.2.1",
-    "@oclif/test": "^4",
-    "@types/chai": "^4",
-    "@types/mocha": "^10",
-    "@types/node": "^18",
-    "chai": "^4",
+    "@types/node": "^22",
     "eslint": "^9",
-    "eslint-config-oclif": "^6",
     "eslint-config-prettier": "^10",
-    "mocha": "^10",
-    "oclif": "^4",
-    "shx": "^0.3.3",
-    "ts-node": "^10",
-    "typescript": "^5"
+    "prettier": "^3",
+    "tsx": "^4",
+    "typescript": "^5",
+    "typescript-eslint": "^8"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=22.0.0"
   },
   "files": [
     "./bin",
-    "./dist",
-    "./oclif.manifest.json"
+    "./src"
   ],
   "homepage": "https://github.com/pyusd-lz/pyusd-lz",
   "keywords": [
-    "oclif"
+    "pyusd",
+    "layerzero",
+    "cross-chain",
+    "ethereum"
   ],
   "license": "MIT",
-  "main": "dist/index.js",
+  "main": "src/index.ts",
   "type": "module",
-  "oclif": {
-    "bin": "pyusd-lz",
-    "dirname": "pyusd-lz",
-    "commands": "./dist/commands",
-    "plugins": [
-      "@oclif/plugin-help",
-      "@oclif/plugin-plugins"
-    ],
-    "topicSeparator": " ",
-    "topics": {
-      "chains": {
-        "description": "Commands for listing supported PYUSD chains"
-      }
-    }
-  },
   "repository": "pyusd-lz/pyusd-lz",
   "scripts": {
-    "build": "shx rm -rf dist && tsc -b",
+    "cli": "tsx bin/cli.ts",
+    "build": "tsc",
     "lint": "eslint",
-    "postpack": "shx rm -f oclif.manifest.json",
-    "posttest": "npm run lint",
-    "prepack": "oclif manifest && oclif readme",
-    "test": "mocha --forbid-only \"test/**/*.test.ts\"",
-    "version": "oclif readme && git add README.md"
-  },
-  "types": "dist/index.d.ts"
+    "format": "prettier --write ."
+  }
 }

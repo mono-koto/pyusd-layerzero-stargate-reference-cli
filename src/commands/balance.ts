@@ -1,74 +1,48 @@
-import {Args, Command, Flags} from '@oclif/core'
+import { Command } from '@commander-js/extra-typings'
 
-import {getChainConfig} from '../lib/chains.js'
-import {createPublicClientForChain, getAddressFromPrivateKey} from '../lib/client.js'
-import {getBalance, getTokenAddress} from '../lib/oft.js'
-import {formatAmount} from '../utils/format.js'
+import { getChainConfig } from '../lib/chains'
+import { createPublicClientForChain, getAddressFromPrivateKey } from '../lib/client'
+import { getBalance, getTokenAddress } from '../lib/oft'
+import { formatAmount } from '../utils/format'
 
-export default class Balance extends Command {
-  static args = {
-    chain: Args.string({
-      description: 'Chain to check balance on (e.g., ethereum, arbitrum, polygon)',
-      required: true,
-    }),
-  }
-static description = 'Check PYUSD balance on a chain'
-static examples = [
-    '<%= config.bin %> balance ethereum',
-    '<%= config.bin %> balance arbitrum',
-    'PYUSD_PRIVATE_KEY=0x... <%= config.bin %> balance polygon',
-  ]
-static flags = {
-    address: Flags.string({
-      char: 'a',
-      description: 'Address to check (defaults to address derived from PYUSD_PRIVATE_KEY)',
-    }),
-  }
+export const balanceCommand = new Command('balance')
+  .description('Check PYUSD balance on a chain')
+  .argument('<chain>', 'Chain to check balance on (e.g., ethereum, arbitrum, polygon)')
+  .option('-a, --address <address>', 'Address to check (defaults to address derived from PRIVATE_KEY)')
+  .action(async (chain, options) => {
+    const chainConfig = getChainConfig(chain)
 
-  async run(): Promise<void> {
-    const {args, flags} = await this.parse(Balance)
-
-    // Get chain config
-    const chainConfig = getChainConfig(args.chain)
-
-    // Determine address to check
     let address: `0x${string}`
-    if (flags.address) {
-      address = flags.address as `0x${string}`
+    if (options.address) {
+      address = options.address as `0x${string}`
     } else {
-      const privateKey = process.env.PYUSD_PRIVATE_KEY
+      const privateKey = process.env.PRIVATE_KEY
       if (!privateKey) {
-        this.error('Either --address flag or PYUSD_PRIVATE_KEY environment variable is required')
+        console.error('Error: Either --address flag or PRIVATE_KEY environment variable is required')
+        process.exit(1)
       }
-
       address = getAddressFromPrivateKey(privateKey as `0x${string}`)
     }
 
-    // Create client and fetch balance
-    const client = createPublicClientForChain(args.chain)
+    const client = createPublicClientForChain(chain)
 
-    this.log('')
-    this.log(`Checking PYUSD balance on ${chainConfig.name}...`)
-    this.log('')
+    console.log('')
+    console.log(`Checking PYUSD balance on ${chainConfig.name}...`)
+    console.log('')
 
     try {
-      // Get the underlying token address from the OFT
       const tokenAddress = await getTokenAddress(client, chainConfig.pyusdAddress)
-
-      // Get balance
       const balance = await getBalance(client, tokenAddress, address)
       const formattedBalance = formatAmount(balance)
 
-      this.log(`Address:  ${address}`)
-      this.log(`Chain:    ${chainConfig.name} (EID: ${chainConfig.eid})`)
-      this.log(`Balance:  ${formattedBalance} PYUSD`)
-      this.log('')
+      console.log(`Address:  ${address}`)
+      console.log(`Chain:    ${chainConfig.name} (EID: ${chainConfig.eid})`)
+      console.log(`Balance:  ${formattedBalance} PYUSD`)
+      console.log('')
     } catch (error) {
       if (error instanceof Error) {
-        this.error(`Failed to fetch balance: ${error.message}`)
+        console.error(`Failed to fetch balance: ${error.message}`)
       }
-
-      throw error
+      process.exit(1)
     }
-  }
-}
+  })

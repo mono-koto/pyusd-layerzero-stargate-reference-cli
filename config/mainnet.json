@@ -1,0 +1,41 @@
+{
+  "ethereum": {
+    "name": "Ethereum",
+    "chainId": 1,
+    "eid": 30101,
+    "pyusdAddress": "0xa2c323fe5a74adffad2bf3e007e36bb029606444",
+    "blockExplorer": "https://etherscan.io",
+    "rpcUrl": "https://eth.llamarpc.com",
+    "nativeCurrency": {
+      "name": "Ether",
+      "symbol": "ETH",
+      "decimals": 18
+    }
+  },
+  "arbitrum": {
+    "name": "Arbitrum",
+    "chainId": 42161,
+    "eid": 30110,
+    "pyusdAddress": "0xfab5891ed867a1195303251912013b92c4fc3a1d",
+    "blockExplorer": "https://arbiscan.io",
+    "rpcUrl": "https://arb1.arbitrum.io/rpc",
+    "nativeCurrency": {
+      "name": "Ether",
+      "symbol": "ETH",
+      "decimals": 18
+    }
+  },
+  "polygon": {
+    "name": "Polygon",
+    "chainId": 137,
+    "eid": 30109,
+    "pyusdAddress": "0xfab5891ed867a1195303251912013b92c4fc3a1d",
+    "blockExplorer": "https://polygonscan.com",
+    "rpcUrl": "https://polygon.llamarpc.com",
+    "nativeCurrency": {
+      "name": "POL",
+      "symbol": "POL",
+      "decimals": 18
+    }
+  }
+}

@@ -306,6 +306,8 @@ config/
 
 ## Development
 
+This project uses [mise](https://mise.jdx.dev/) for tool version management. The `mise.toml` file specifies Node.js 22 as the required version. If you have mise installed, it will automatically use the correct Node version when you enter the project directory.
+
 ```bash
 # Run CLI directly with tsx
 npm run cli chains

@@ -1,1 +1,0 @@
-{"root":["./src/index.ts","./src/commands/balance.ts","./src/commands/quote.ts","./src/commands/send.ts","./src/commands/chains/list.ts","./src/lib/chains.ts","./src/lib/client.ts","./src/lib/oft.ts","./src/lib/options.ts","./src/lib/abi/erc20.ts","./src/lib/abi/ioft.ts","./src/types/index.ts","./src/utils/address.ts","./src/utils/format.ts"],"version":"5.9.3"}

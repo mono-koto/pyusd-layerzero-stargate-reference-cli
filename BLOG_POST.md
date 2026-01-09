@@ -56,8 +56,14 @@ For OFT Adapters, get the underlying token address first:
 
 ```typescript
 import type { Address, PublicClient } from "viem";
-import { erc20Abi } from "./abi/erc20";
-import { ioftAbi } from "./abi/ioft";
+import { erc20Abi } from "viem"; // Use viem's built-in ERC20 ABI
+
+// Minimal IOFT ABI - only the functions we need
+const ioftAbi = [
+  { type: "function", name: "token", inputs: [], outputs: [{ type: "address" }], stateMutability: "view" },
+  { type: "function", name: "approvalRequired", inputs: [], outputs: [{ type: "bool" }], stateMutability: "view" },
+  // ... quoteSend, quoteOFT, send functions
+] as const;
 
 export async function getTokenAddress(
   client: PublicClient,
@@ -222,19 +228,7 @@ Format token amounts correctly (PYUSD uses 6 decimals) and native fees (18 decim
 ### Executing the Transfer
 
 ```typescript
-import { toEventSignature, decodeEventLog, type Hex } from "viem";
-
-const OFT_SENT_EVENT = {
-  type: "event",
-  name: "OFTSent",
-  inputs: [
-    { name: "guid", type: "bytes32", indexed: true },
-    { name: "dstEid", type: "uint32", indexed: true },
-    { name: "fromAddress", type: "address", indexed: true },
-    { name: "amountSentLD", type: "uint256", indexed: false },
-    { name: "amountReceivedLD", type: "uint256", indexed: false },
-  ],
-} as const;
+import { parseEventLogs, type Hex } from "viem";
 
 export async function send(
   walletClient: WalletClient,
@@ -256,22 +250,14 @@ export async function send(
 
   const receipt = await publicClient.waitForTransactionReceipt({ hash });
 
-  // Extract GUID from OFTSent event
-  const eventSignature = toEventSignature(OFT_SENT_EVENT);
-  let guid: Hex = "0x";
+  // Parse OFTSent event using viem's type-safe parseEventLogs
+  const logs = parseEventLogs({
+    abi: ioftAbi,
+    logs: receipt.logs,
+    eventName: "OFTSent",
+  });
 
-  for (const log of receipt.logs) {
-    if (log.topics[0] === eventSignature) {
-      const decoded = decodeEventLog({
-        abi: [OFT_SENT_EVENT],
-        data: log.data,
-        topics: log.topics,
-      });
-      guid = decoded.args.guid;
-      break;
-    }
-  }
-
+  const guid = logs[0]?.args?.guid ?? ("0x" as Hex);
   return { guid, txHash: hash };
 }
 ```

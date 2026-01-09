@@ -4,7 +4,9 @@ A CLI tool for cross-chain PYUSD transfers using LayerZero.
 
 ## Overview
 
-This demo CLI shows how to transfer PYUSD tokens across EVM chains using LayerZero's Omnichain Fungible Token (OFT) standard.
+This CLI tool demonstrates cross-chain PYUSD transfers using LayerZero's Omnichain Fungible Token (OFT) standard. Built with TypeScript, viem, and official LayerZero utilities.
+
+**See [BLOG_POST.md](./BLOG_POST.md) for a detailed technical guide on implementing cross-chain OFT transfers.**
 
 ### Supported Chains (Mainnet)
 
@@ -260,45 +262,47 @@ Fetch PYUSD chain configurations from LayerZero metadata API.
 
 ## How It Works
 
-1. **LayerZero OFT**: PYUSD uses LayerZero's OFT standard for cross-chain transfers. Each chain has a PYUSD OFT adapter that handles locking/unlocking or minting/burning tokens.
+PYUSD uses LayerZero's Omnichain Fungible Token (OFT) standard for cross-chain transfers:
 
-2. **Quote**: Before transferring, the CLI fetches a quote from the source chain's OFT contract to determine the LayerZero messaging fee.
-
-3. **Approval**: If the OFT adapter requires ERC20 approval (for OFT Adapters), the CLI will automatically approve the transfer.
-
-4. **Transfer**: The CLI calls the OFT `send()` function with the destination chain ID, recipient address, and amount. LayerZero handles the cross-chain message delivery.
-
-5. **Receive**: On the destination chain, LayerZero calls the OFT's `lzReceive()` function to mint or unlock tokens to the recipient.
+1. **Quote** - Fetch LayerZero messaging fees from the source chain's OFT contract
+2. **Approval** - Automatically approve if the OFT adapter requires ERC20 approval
+3. **Transfer** - Call OFT `send()` with destination chain, recipient, and amount
+4. **Delivery** - LayerZero DVNs verify and deliver the message to the destination chain
+5. **Receive** - Destination OFT calls `lzReceive()` to mint/unlock tokens to the recipient
+6. **Track** - Monitor status via LayerZero Scan API using the transaction GUID
 
 ## Architecture
 
 ```
 src/
-├── commands/
-│   ├── balance.ts        # Check PYUSD balance
-│   ├── chains.ts         # List supported chains
-│   ├── fetch-chains.ts   # Fetch config from API
-│   ├── quote.ts          # Get transfer quote
-│   ├── transfer.ts       # Execute transfer
-│   └── status.ts         # Check transfer status
-├── lib/
-│   ├── abi/
-│   │   ├── ioft.ts       # IOFT interface ABI
-│   │   └── erc20.ts      # ERC20 ABI
-│   ├── chains.ts         # Chain configurations
-│   ├── client.ts         # Viem client factory
-│   ├── oft.ts            # OFT interactions
-│   └── options.ts        # LayerZero options builder
+├── commands/           # CLI command implementations
+│   ├── balance.ts     # Check PYUSD balance
+│   ├── chains.ts      # List supported chains
+│   ├── fetch-chains.ts # Fetch config from API
+│   ├── quote.ts       # Get transfer quote
+│   ├── transfer.ts    # Execute transfer
+│   └── status.ts      # Check transfer status
+├── lib/               # Core library functions
+│   ├── chains.ts      # Chain configurations
+│   ├── client.ts      # Viem client factory
+│   ├── oft.ts         # OFT contract interactions (uses viem's erc20Abi)
+│   ├── options.ts     # LayerZero options (uses @layerzerolabs/lz-v2-utilities)
+│   └── send-preparation.ts # SendParam builder
 ├── types/
-│   └── index.ts          # TypeScript interfaces
+│   └── index.ts       # TypeScript interfaces
 └── utils/
-    ├── address.ts        # Address utilities
-    └── format.ts         # Formatting utilities
+    ├── address.ts     # Address utilities (bytes32 encoding)
+    └── format.ts      # PYUSD formatting (6 decimals)
 
 config/
-├── mainnet.json          # Mainnet chain configurations
-└── testnet.json          # Testnet chain configurations
+├── mainnet.json       # Mainnet chain configurations
+└── testnet.json       # Testnet chain configurations
 ```
+
+**Key Dependencies:**
+- `viem` - Ethereum client with built-in ERC20 ABI
+- `@layerzerolabs/lz-v2-utilities` - Official LayerZero utilities (Options encoding)
+- `commander` - CLI framework
 
 ## Development
 

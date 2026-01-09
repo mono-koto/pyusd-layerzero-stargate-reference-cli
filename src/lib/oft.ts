@@ -1,33 +1,88 @@
 import type {Address, Hex, PublicClient, WalletClient} from 'viem'
-import {toEventSignature} from 'viem'
+import {erc20Abi, parseEventLogs} from 'viem'
 
 import type {MessagingFee, QuoteResult, SendParam} from '../types/index'
 
-import {erc20Abi} from './abi/erc20'
-import {ioftAbi} from './abi/ioft'
-
-/**
- * OFTSent event definition
- * Emitted when tokens are sent cross-chain. The GUID (first indexed topic)
- * is a globally unique identifier used to track the message across LayerZero network.
- */
-const OFT_SENT_EVENT = {
-  type: 'event',
-  name: 'OFTSent',
-  inputs: [
-    {name: 'guid', type: 'bytes32', indexed: true},
-    {name: 'dstEid', type: 'uint32', indexed: true},
-    {name: 'fromAddress', type: 'address', indexed: true},
-    {name: 'amountSentLD', type: 'uint256', indexed: false},
-    {name: 'amountReceivedLD', type: 'uint256', indexed: false},
-  ],
-} as const
-
-const OFT_SENT_EVENT_SIGNATURE = toEventSignature(OFT_SENT_EVENT)
+// IOFT ABI - sourced from @layerzerolabs/oft-evm
+// Only includes the functions we use to keep bundle small
+const ioftAbi = [
+  {type: 'function', name: 'approvalRequired', inputs: [], outputs: [{type: 'bool'}], stateMutability: 'view'},
+  {type: 'function', name: 'token', inputs: [], outputs: [{type: 'address'}], stateMutability: 'view'},
+  {
+    type: 'function',
+    name: 'quoteOFT',
+    inputs: [{name: '_sendParam', type: 'tuple', components: [
+      {name: 'dstEid', type: 'uint32'},
+      {name: 'to', type: 'bytes32'},
+      {name: 'amountLD', type: 'uint256'},
+      {name: 'minAmountLD', type: 'uint256'},
+      {name: 'extraOptions', type: 'bytes'},
+      {name: 'composeMsg', type: 'bytes'},
+      {name: 'oftCmd', type: 'bytes'},
+    ]}],
+    outputs: [
+      {type: 'tuple', components: [{name: 'minAmountLD', type: 'uint256'}, {name: 'maxAmountLD', type: 'uint256'}]},
+      {type: 'tuple[]', components: [{name: 'feeAmountLD', type: 'int256'}, {name: 'description', type: 'string'}]},
+      {type: 'tuple', components: [{name: 'amountSentLD', type: 'uint256'}, {name: 'amountReceivedLD', type: 'uint256'}]},
+    ],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    name: 'quoteSend',
+    inputs: [
+      {name: '_sendParam', type: 'tuple', components: [
+        {name: 'dstEid', type: 'uint32'},
+        {name: 'to', type: 'bytes32'},
+        {name: 'amountLD', type: 'uint256'},
+        {name: 'minAmountLD', type: 'uint256'},
+        {name: 'extraOptions', type: 'bytes'},
+        {name: 'composeMsg', type: 'bytes'},
+        {name: 'oftCmd', type: 'bytes'},
+      ]},
+      {name: '_payInLzToken', type: 'bool'},
+    ],
+    outputs: [{type: 'tuple', components: [{name: 'nativeFee', type: 'uint256'}, {name: 'lzTokenFee', type: 'uint256'}]}],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    name: 'send',
+    inputs: [
+      {name: '_sendParam', type: 'tuple', components: [
+        {name: 'dstEid', type: 'uint32'},
+        {name: 'to', type: 'bytes32'},
+        {name: 'amountLD', type: 'uint256'},
+        {name: 'minAmountLD', type: 'uint256'},
+        {name: 'extraOptions', type: 'bytes'},
+        {name: 'composeMsg', type: 'bytes'},
+        {name: 'oftCmd', type: 'bytes'},
+      ]},
+      {name: '_fee', type: 'tuple', components: [{name: 'nativeFee', type: 'uint256'}, {name: 'lzTokenFee', type: 'uint256'}]},
+      {name: '_refundAddress', type: 'address'},
+    ],
+    outputs: [
+      {type: 'tuple', components: [{name: 'guid', type: 'bytes32'}, {name: 'nonce', type: 'uint64'}]},
+      {type: 'tuple', components: [{name: 'amountSentLD', type: 'uint256'}, {name: 'amountReceivedLD', type: 'uint256'}]},
+    ],
+    stateMutability: 'payable',
+  },
+  {
+    type: 'event',
+    name: 'OFTSent',
+    inputs: [
+      {name: 'guid', type: 'bytes32', indexed: true},
+      {name: 'dstEid', type: 'uint32', indexed: true},
+      {name: 'fromAddress', type: 'address', indexed: true},
+      {name: 'amountSentLD', type: 'uint256'},
+      {name: 'amountReceivedLD', type: 'uint256'},
+    ],
+  },
+] as const
 
 /**
  * Get the underlying ERC20 token address for an OFT
- * Falls back to the address itself if it's not an OFT adapter (e.g., raw token on testnet)
+ * Falls back to the address itself if it's not an OFT adapter
  */
 export async function getTokenAddress(client: PublicClient, oftAddress: Address): Promise<Address> {
   try {
@@ -35,9 +90,9 @@ export async function getTokenAddress(client: PublicClient, oftAddress: Address)
       abi: ioftAbi,
       address: oftAddress,
       functionName: 'token',
-    }) as Address
+    })
   } catch {
-    // If token() doesn't exist, assume the address is the token itself
+    // If token() doesn't exist, the OFT IS the token
     return oftAddress
   }
 }
@@ -50,7 +105,7 @@ export async function isApprovalRequired(client: PublicClient, oftAddress: Addre
     abi: ioftAbi,
     address: oftAddress,
     functionName: 'approvalRequired',
-  }) as Promise<boolean>
+  })
 }
 
 /**
@@ -62,7 +117,7 @@ export async function getBalance(client: PublicClient, tokenAddress: Address, ac
     address: tokenAddress,
     args: [account],
     functionName: 'balanceOf',
-  }) as Promise<bigint>
+  })
 }
 
 /**
@@ -79,7 +134,7 @@ export async function getAllowance(
     address: tokenAddress,
     args: [owner, spender],
     functionName: 'allowance',
-  }) as Promise<bigint>
+  })
 }
 
 /**
@@ -101,15 +156,12 @@ export async function approve(
     functionName: 'approve',
   })
 
-  // Wait for transaction confirmation
   await publicClient.waitForTransactionReceipt({hash})
-
   return hash
 }
 
 /**
  * Get a quote for sending tokens cross-chain
- * Returns messaging fee and OFT-specific details (limits, fees, receipt preview)
  */
 export async function quoteSend(
   client: PublicClient,
@@ -117,25 +169,19 @@ export async function quoteSend(
   sendParam: SendParam,
   payInLzToken: boolean = false,
 ): Promise<QuoteResult> {
-  // Get messaging fee
-  const messagingFee = (await client.readContract({
+  const messagingFee = await client.readContract({
     abi: ioftAbi,
     address: oftAddress,
     args: [sendParam, payInLzToken],
     functionName: 'quoteSend',
-  })) as {lzTokenFee: bigint; nativeFee: bigint;}
+  })
 
-  // Get OFT-specific quote (limits, fees, receipt)
-  const [limit, feeDetails, receipt] = (await client.readContract({
+  const [limit, feeDetails, receipt] = await client.readContract({
     abi: ioftAbi,
     address: oftAddress,
     args: [sendParam],
     functionName: 'quoteOFT',
-  })) as [
-    {maxAmountLD: bigint; minAmountLD: bigint;},
-    Array<{description: string; feeAmountLD: bigint;}>,
-    {amountReceivedLD: bigint; amountSentLD: bigint;},
-  ]
+  })
 
   return {
     feeDetails: feeDetails.map((f) => ({
@@ -159,7 +205,6 @@ export async function quoteSend(
 
 /**
  * Send tokens cross-chain
- * Returns the transaction hash
  */
 export async function send(
   walletClient: WalletClient,
@@ -168,7 +213,7 @@ export async function send(
   sendParam: SendParam,
   fee: MessagingFee,
   refundAddress: Address,
-): Promise<{guid: Hex; txHash: Hex;}> {
+): Promise<{guid: Hex; txHash: Hex}> {
   const hash = await walletClient.writeContract({
     abi: ioftAbi,
     account: walletClient.account!,
@@ -179,25 +224,21 @@ export async function send(
     value: fee.nativeFee,
   })
 
-  // Wait for transaction and get receipt to extract guid
   const receipt = await publicClient.waitForTransactionReceipt({hash})
 
-  // Extract guid from OFTSent event logs
-  // The guid is the first indexed topic in the OFTSent event
-  let guid: Hex = '0x'
-  for (const log of receipt.logs) {
-    if (log.topics[0] === OFT_SENT_EVENT_SIGNATURE) {
-      guid = log.topics[1] as Hex
-      break
-    }
-  }
+  // Parse OFTSent event using viem's type-safe parseEventLogs
+  const logs = parseEventLogs({
+    abi: ioftAbi,
+    logs: receipt.logs,
+    eventName: 'OFTSent',
+  })
 
+  const guid = logs[0]?.args?.guid ?? ('0x' as Hex)
   return {guid, txHash: hash}
 }
 
 /**
  * Check and approve tokens if needed
- * Returns true if approval was performed
  */
 export async function checkAndApprove(
   walletClient: WalletClient,
@@ -205,25 +246,19 @@ export async function checkAndApprove(
   oftAddress: Address,
   amount: bigint,
 ): Promise<{approved: boolean; txHash?: Hex}> {
-  // Check if approval is required for this OFT
   const needsApproval = await isApprovalRequired(publicClient, oftAddress)
   if (!needsApproval) {
     return {approved: false}
   }
 
-  // Get the underlying token address
   const tokenAddress = await getTokenAddress(publicClient, oftAddress)
-
-  // Get current allowance
   const owner = walletClient.account!.address
   const currentAllowance = await getAllowance(publicClient, tokenAddress, owner, oftAddress)
 
-  // If allowance is sufficient, no approval needed
   if (currentAllowance >= amount) {
     return {approved: false}
   }
 
-  // Approve max uint256 for convenience (common pattern)
   const maxApproval = 2n ** 256n - 1n
   const txHash = await approve(walletClient, publicClient, tokenAddress, oftAddress, maxApproval)
 

@@ -13,10 +13,3 @@ export const DEFAULT_GAS_LIMIT = 200_000n
 export function buildLzReceiveOptions(gasLimit: bigint = DEFAULT_GAS_LIMIT): Hex {
   return Options.newOptions().addExecutorLzReceiveOption(gasLimit, 0n).toHex() as Hex
 }
-
-/**
- * Get empty options (use default executor settings)
- */
-export function emptyOptions(): Hex {
-  return '0x'
-}

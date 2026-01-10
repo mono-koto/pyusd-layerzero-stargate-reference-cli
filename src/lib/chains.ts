@@ -17,7 +17,7 @@ const configDir = join(__dirname, '../../config')
 const configPath = join(configDir, 'chains.json')
 
 // Config file structure
-interface ConfigFileChain {
+export interface ConfigFileChain {
   name: string
   chainId: number
   eid: number
@@ -27,7 +27,7 @@ interface ConfigFileChain {
   decimals: number
   blockExplorer: string
   rpcUrl: string
-  nativeCurrency: { name?: string; symbol: string; decimals: number }
+  nativeCurrency: { name: string; symbol: string; decimals: number }
 }
 
 interface ConfigFile {

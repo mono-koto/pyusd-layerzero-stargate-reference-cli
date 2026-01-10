@@ -2,6 +2,7 @@ import { statSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { Command } from '@commander-js/extra-typings'
+import type { ConfigFileChain } from '../lib/chains'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const configDir = join(__dirname, '../../config')
@@ -10,22 +11,9 @@ const defaultConfigPath = join(configDir, 'chains.json')
 const METADATA_URL = 'https://metadata.layerzero-api.com/v1/metadata'
 
 // Output config structure
-interface ChainConfig {
-  name: string
-  chainId: number
-  eid: number
-  tokenAddress: string // The ERC20 token users hold
-  oftAddress: string // The OFT/ProxyOFT contract for bridging
-  oftType: 'OFTAdapter' | 'NativeOFT' | 'ProxyOFT' // Adapter=lock/unlock, NativeOFT=single contract, ProxyOFT=mint/burn
-  decimals: number
-  blockExplorer: string
-  rpcUrl: string
-  nativeCurrency: { name: string; symbol: string; decimals: number }
-}
-
 interface PyusdConfig {
-  pyusd: Record<string, ChainConfig> // Chains with real PYUSD + OFT Adapter
-  pyusd0: Record<string, ChainConfig> // Chains with PYUSD0 OFT
+  pyusd: Record<string, ConfigFileChain> // Chains with real PYUSD + OFT Adapter
+  pyusd0: Record<string, ConfigFileChain> // Chains with PYUSD0 OFT
 }
 
 export const updateMetadataCommand = new Command('update-metadata')
@@ -160,7 +148,7 @@ function buildChainConfig(
   eid: number,
   oftAddress: string,
   token: MetadataTokenEntry
-): ChainConfig {
+): ConfigFileChain {
   const tokenAddress =
     token.type === 'NativeOFT' ? oftAddress : (token.erc20TokenAddress ?? oftAddress)
 

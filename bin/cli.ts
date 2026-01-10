@@ -4,7 +4,7 @@ import { Command } from '@commander-js/extra-typings'
 
 import { balanceCommand } from '../src/commands/balance'
 import { chainsCommand } from '../src/commands/chains'
-import { fetchChainsCommand } from '../src/commands/fetch-chains'
+import { updateMetadataCommand } from '../src/commands/update-metadata'
 import { quoteCommand } from '../src/commands/quote'
 import { statusCommand } from '../src/commands/status'
 import { transferCommand } from '../src/commands/transfer'
@@ -19,6 +19,6 @@ program.addCommand(quoteCommand)
 program.addCommand(transferCommand)
 program.addCommand(statusCommand)
 program.addCommand(chainsCommand)
-program.addCommand(fetchChainsCommand)
+program.addCommand(updateMetadataCommand)
 
 program.parse()

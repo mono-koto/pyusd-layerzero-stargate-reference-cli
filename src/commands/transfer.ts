@@ -1,6 +1,6 @@
 import { Command } from '@commander-js/extra-typings'
 
-import { getChainConfig } from '../lib/chains'
+import { resolveChainConfigsForTransfer } from '../lib/chains'
 import { createPublicClientForChain, createWalletClientForChain } from '../lib/client'
 import { resolveAddress } from '../lib/input-validation'
 import { checkAndApprove, getBalance, getTokenAddress, quoteSend, send } from '../lib/oft'
@@ -24,8 +24,7 @@ export const transferCommand = new Command('transfer')
       process.exit(1)
     }
 
-    const srcConfig = getChainConfig(source)
-    const dstConfig = getChainConfig(destination)
+    const { srcConfig, dstConfig } = resolveChainConfigsForTransfer(source, destination)
 
     // Resolve sender and recipient addresses
     const senderAddress = resolveAddress({ requirePrivateKey: true })
@@ -34,14 +33,14 @@ export const transferCommand = new Command('transfer')
     // Prepare SendParam with all parameters
     const { sendParam, amountLD } = prepareSendParam({
       amount,
-      destination,
+      dstEid: dstConfig.eid,
       recipient: recipientAddress,
       slippage: options.slippage,
       gas: options.gas,
     })
 
-    const publicClient = createPublicClientForChain(source)
-    const walletClient = createWalletClientForChain(source, privateKey as `0x${string}`)
+    const publicClient = createPublicClientForChain(srcConfig)
+    const walletClient = createWalletClientForChain(srcConfig, privateKey as `0x${string}`)
 
     console.log('')
     console.log('PYUSD Cross-Chain Transfer')
@@ -55,7 +54,7 @@ export const transferCommand = new Command('transfer')
     try {
       // Step 1: Check balance
       console.log('Step 1/4: Checking balance...')
-      const tokenAddress = await getTokenAddress(publicClient, srcConfig.pyusdAddress)
+      const tokenAddress = await getTokenAddress(publicClient, srcConfig.oftAddress)
       const balance = await getBalance(publicClient, tokenAddress, senderAddress)
 
       if (balance < amountLD) {
@@ -68,7 +67,7 @@ export const transferCommand = new Command('transfer')
 
       // Step 2: Check/set approval
       console.log('Step 2/4: Checking approval...')
-      const approvalResult = await checkAndApprove(walletClient, publicClient, srcConfig.pyusdAddress, amountLD)
+      const approvalResult = await checkAndApprove(walletClient, publicClient, srcConfig.oftAddress, amountLD)
 
       if (approvalResult.approved) {
         console.log(`  ✓ Approved (tx: ${truncateAddress(approvalResult.txHash!)})`)
@@ -80,7 +79,7 @@ export const transferCommand = new Command('transfer')
 
       // Step 3: Get quote
       console.log('Step 3/4: Getting quote...')
-      const quote = await quoteSend(publicClient, srcConfig.pyusdAddress, sendParam)
+      const quote = await quoteSend(publicClient, srcConfig.oftAddress, sendParam)
       console.log(`  ✓ Fee: ${formatNativeFee(quote.messagingFee.nativeFee, srcConfig.nativeCurrency.symbol)}`)
       console.log(`  ✓ Will receive: ${formatAmount(quote.receipt.amountReceivedLD)} PYUSD`)
       console.log('')
@@ -100,7 +99,7 @@ export const transferCommand = new Command('transfer')
       const { guid, txHash } = await send(
         walletClient,
         publicClient,
-        srcConfig.pyusdAddress,
+        srcConfig.oftAddress,
         sendParam,
         quote.messagingFee,
         senderAddress,

@@ -6,22 +6,55 @@ A CLI tool for cross-chain PYUSD transfers using LayerZero.
 
 This CLI tool demonstrates cross-chain PYUSD transfers using LayerZero's Omnichain Fungible Token (OFT) standard. Built with TypeScript, viem, and official LayerZero utilities.
 
-**See [BLOG_POST.md](./BLOG_POST.md) for a detailed technical guide on implementing cross-chain OFT transfers.**
+**See [PYUSD_OFT_GUIDE.md](./PYUSD_OFT_GUIDE.md) for a detailed technical guide on implementing cross-chain OFT transfers.**
 
-### Supported Chains (Mainnet)
+### Supported Chains
 
+PYUSD is deployed across two LayerZero OFT meshes:
+
+**PYUSD Mesh** (OFTAdapter - lock/unlock):
 | Chain     | EID   | Chain ID |
 |-----------|-------|----------|
 | Ethereum  | 30101 | 1        |
 | Arbitrum  | 30110 | 42161    |
-| Polygon   | 30109 | 137      |
+| Flow      | 30336 | 747      |
+| Glue      | 30342 | 1300     |
 
-### Supported Chains (Testnet)
+**PYUSD0 Mesh** (ProxyOFT - mint/burn):
+| Chain      | EID   | Chain ID |
+|------------|-------|----------|
+| Polygon    | 30109 | 137      |
+| Arbitrum   | 30110 | 42161    |
+| Avalanche  | 30106 | 43114    |
+| Sei        | 30280 | 1329     |
+| Ink        | 30339 | 57073    |
+| Abstract   | 30324 | 2741     |
+| Fraxtal    | 30255 | 252      |
 
-| Chain            | Key              | EID   | Chain ID  |
-|------------------|------------------|-------|-----------|
-| Ethereum Sepolia | ethereum-sepolia | 40161 | 11155111  |
-| Arbitrum Sepolia | arbitrum-sepolia | 40231 | 421614    |
+### Routing
+
+The two meshes are **not directly connected**. Transfers can only occur between chains within the same mesh:
+
+```
+PYUSD Mesh:     Ethereum ←→ Arbitrum ←→ Flow ←→ Glue
+                               ↕
+PYUSD0 Mesh:               Arbitrum ←→ Polygon ←→ Avalanche ←→ Sei ←→ ...
+```
+
+**Valid routes:**
+- Ethereum ↔ Arbitrum ✓ (both in PYUSD mesh)
+- Polygon ↔ Arbitrum ✓ (both in PYUSD0 mesh)
+- Polygon ↔ Avalanche ✓ (both in PYUSD0 mesh)
+
+**Invalid routes:**
+- Polygon → Ethereum ✗ (different meshes, no peer configured)
+- Sei → Ethereum ✗ (different meshes)
+
+**Arbitrum is a bridge:** To transfer between meshes (e.g., Polygon → Ethereum), you must do a two-hop transfer through Arbitrum:
+1. Polygon → Arbitrum (PYUSD0 mesh)
+2. Arbitrum → Ethereum (PYUSD mesh)
+
+The CLI automatically selects the correct OFT contract based on your destination chain.
 
 ## Installation
 
@@ -51,23 +84,6 @@ RPC_ARBITRUM=https://arb-mainnet.g.alchemy.com/v2/YOUR_KEY
 RPC_POLYGON=https://polygon-mainnet.g.alchemy.com/v2/YOUR_KEY
 ```
 
-### Testnet Mode
-
-To use testnet chains, set the `TESTNET` environment variable:
-
-```bash
-TESTNET=true npm run cli chains
-```
-
-For testnet, configure these RPC endpoints:
-
-```bash
-RPC_ETHEREUM_SEPOLIA=https://sepolia.infura.io/v3/YOUR_KEY
-RPC_ARBITRUM_SEPOLIA=https://arb-sepolia.g.alchemy.com/v2/YOUR_KEY
-```
-
-**Note:** Testnet mode uses the raw PYUSD token addresses on Sepolia and Arbitrum Sepolia. The `balance` command works, but cross-chain transfers (`quote` and `send`) require LayerZero OFT adapters which are not officially deployed on testnets. Get testnet PYUSD from the [Paxos Faucet](https://faucet.paxos.com/).
-
 ## Usage
 
 ### List Supported Chains
@@ -76,17 +92,22 @@ RPC_ARBITRUM_SEPOLIA=https://arb-sepolia.g.alchemy.com/v2/YOUR_KEY
 npm run cli chains
 ```
 
-Output:
+Output shows both OFT meshes:
 ```
-Supported PYUSD Chains (MAINNET)
-────────────────────────────────────────────────────────────────────────────────
-Chain              EID      Chain ID   PYUSD Address
-────────────────────────────────────────────────────────────────────────────────
-Ethereum           30101    1          0xa2c323fe5a74adffad2bf3e007e36bb029606444
-Arbitrum           30110    42161      0xfab5891ed867a1195303251912013b92c4fc3a1d
-Polygon            30109    137        0xfab5891ed867a1195303251912013b92c4fc3a1d
+PYUSD Chains
+───────────────────────────────────────────────────────────────────────────────
+Chain          EID      Type         Operation      OFT Address
+───────────────────────────────────────────────────────────────────────────────
+ethereum       30101    OFTAdapter   lock/unlock    0xa2c323fe5a74adffad2bf3e007e36bb029606444
+arbitrum       30110    OFTAdapter   lock/unlock    0xfab5891ed867a1195303251912013b92c4fc3a1d
 
-Total: 3 chains
+PYUSD0 Chains
+───────────────────────────────────────────────────────────────────────────────
+polygon        30109    ProxyOFT     mint/burn      0x26d27d5af2f6f1c14f40013c8619d97aaf015509
+arbitrum       30110    ProxyOFT     mint/burn      0x3cd2b89c49d130c08f1d683225b2e5deb63ff876
+...
+
+Total: 13 chains (4 PYUSD + 9 PYUSD0)
 ```
 
 ### Check PYUSD Balance
@@ -178,12 +199,12 @@ TX Hash:      0xe917e041...
 Timestamp:    1/6/2026, 9:50:12 AM
 ```
 
-### Fetch Chain Configurations
+### Update Chain Metadata
 
-Update chain configurations from the LayerZero metadata API:
+Fetch latest PYUSD chain configurations from the LayerZero metadata API:
 
 ```bash
-npm run cli fetch-chains
+npm run cli update-metadata
 ```
 
 ## Command Reference
@@ -241,24 +262,22 @@ Check the status of a cross-chain transfer using LayerZero Scan API.
 **Arguments:**
 - `txHash` - Source chain transaction hash
 
-### `fetch-chains`
+### `update-metadata`
 
-Fetch PYUSD chain configurations from LayerZero metadata API.
+Fetch PYUSD/PYUSD0 chain configurations from LayerZero metadata API.
 
 **Flags:**
-- `--output` - Output file path (default: config/mainnet.json)
+- `--output` - Output file path (default: config/chains.json)
 
 ## Environment Variables
 
 | Variable | Description | Required |
 |----------|-------------|----------|
-| `PRIVATE_KEY` | Your wallet private key for signing transactions | Yes (for send/balance) |
-| `TESTNET` | Set to `true` or `1` to use testnet chains | No |
+| `PRIVATE_KEY` | Your wallet private key for signing transactions | Yes (for transfer/balance) |
 | `RPC_ETHEREUM` | Custom Ethereum RPC endpoint | No |
 | `RPC_ARBITRUM` | Custom Arbitrum RPC endpoint | No |
 | `RPC_POLYGON` | Custom Polygon RPC endpoint | No |
-| `RPC_ETHEREUM_SEPOLIA` | Custom Ethereum Sepolia RPC endpoint (testnet) | No |
-| `RPC_ARBITRUM_SEPOLIA` | Custom Arbitrum Sepolia RPC endpoint (testnet) | No |
+| `RPC_<CHAIN>` | Custom RPC for any chain (e.g., `RPC_AVALANCHE`) | No |
 
 ## How It Works
 
@@ -275,28 +294,27 @@ PYUSD uses LayerZero's Omnichain Fungible Token (OFT) standard for cross-chain t
 
 ```
 src/
-├── commands/           # CLI command implementations
-│   ├── balance.ts     # Check PYUSD balance
-│   ├── chains.ts      # List supported chains
-│   ├── fetch-chains.ts # Fetch config from API
-│   ├── quote.ts       # Get transfer quote
-│   ├── transfer.ts    # Execute transfer
-│   └── status.ts      # Check transfer status
-├── lib/               # Core library functions
-│   ├── chains.ts      # Chain configurations
-│   ├── client.ts      # Viem client factory
-│   ├── oft.ts         # OFT contract interactions (uses viem's erc20Abi)
-│   ├── options.ts     # LayerZero options (uses @layerzerolabs/lz-v2-utilities)
+├── commands/              # CLI command implementations
+│   ├── balance.ts        # Check PYUSD balance
+│   ├── chains.ts         # List supported chains
+│   ├── update-metadata.ts # Fetch config from LayerZero API
+│   ├── quote.ts          # Get transfer quote
+│   ├── transfer.ts       # Execute transfer
+│   └── status.ts         # Check transfer status
+├── lib/                   # Core library functions
+│   ├── chains.ts         # Chain configs + smart mesh resolution
+│   ├── client.ts         # Viem client factory
+│   ├── oft.ts            # OFT contract interactions
+│   ├── options.ts        # LayerZero options encoding
 │   └── send-preparation.ts # SendParam builder
 ├── types/
-│   └── index.ts       # TypeScript interfaces
+│   └── index.ts          # TypeScript interfaces
 └── utils/
-    ├── address.ts     # Address utilities (bytes32 encoding)
-    └── format.ts      # PYUSD formatting (6 decimals)
+    ├── address.ts        # Address utilities (bytes32 encoding)
+    └── format.ts         # PYUSD formatting (6 decimals)
 
 config/
-├── mainnet.json       # Mainnet chain configurations
-└── testnet.json       # Testnet chain configurations
+└── chains.json           # PYUSD + PYUSD0 chain configurations
 ```
 
 **Key Dependencies:**
@@ -311,9 +329,6 @@ This project uses [mise](https://mise.jdx.dev/) for tool version management. The
 ```bash
 # Run CLI directly with tsx
 npm run cli chains
-
-# Run with testnet
-TESTNET=true npm run cli chains
 
 # Build (type check)
 npm run build

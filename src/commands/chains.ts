@@ -1,39 +1,51 @@
 import { Command } from '@commander-js/extra-typings'
 
-import { getSupportedChains, isTestnet } from '../lib/chains'
+import { getPyusdChains, getPyusd0Chains, getSupportedChains } from '../lib/chains'
 
 export const chainsCommand = new Command('chains')
-  .description('List all chains where PYUSD is available via LayerZero')
+  .description('List all chains where PYUSD/PYUSD0 is available via LayerZero')
   .option('-f, --format <format>', 'Output format (table or json)', 'table')
   .action((options) => {
-    const chains = getSupportedChains()
-    const mode = isTestnet ? 'TESTNET' : 'MAINNET'
+    const pyusdChains = getPyusdChains()
+    const pyusd0Chains = getPyusd0Chains()
 
     if (options.format === 'json') {
-      console.log(JSON.stringify({ mode, chains }, null, 2))
+      console.log(JSON.stringify({ pyusd: pyusdChains, pyusd0: pyusd0Chains }, null, 2))
       return
     }
 
     // Table format
     console.log('')
-    console.log(`Supported PYUSD Chains (${mode})`)
-    console.log('─'.repeat(80))
+    console.log('PYUSD Chains')
+    console.log('─'.repeat(95))
     console.log(
-      `${'Chain'.padEnd(18)} ${'EID'.padEnd(8)} ${'Chain ID'.padEnd(10)} ${'PYUSD Address'.padEnd(44)}`,
+      `${'Chain'.padEnd(14)} ${'EID'.padEnd(8)} ${'Type'.padEnd(12)} ${'Operation'.padEnd(14)} ${'OFT Address'}`,
     )
-    console.log('─'.repeat(80))
+    console.log('─'.repeat(95))
 
-    for (const chain of chains) {
+    for (const chain of pyusdChains) {
+      const operation = chain.oftType === 'OFTAdapter' ? 'lock/unlock' :
+                        chain.oftType === 'NativeOFT' ? 'mint/burn' : 'mint/burn'
       console.log(
-        `${chain.name.padEnd(18)} ${chain.eid.toString().padEnd(8)} ${chain.chainId.toString().padEnd(10)} ${chain.pyusdAddress}`,
+        `${chain.name.padEnd(14)} ${chain.eid.toString().padEnd(8)} ${chain.oftType.padEnd(12)} ${operation.padEnd(14)} ${chain.oftAddress}`,
       )
     }
 
     console.log('')
-    console.log(`Total: ${chains.length} chains`)
-    if (isTestnet) {
-      console.log('')
-      console.log('Note: Running in testnet mode. Set TESTNET=false or unset to use mainnet.')
+    console.log('PYUSD0 Chains')
+    console.log('─'.repeat(95))
+    console.log(
+      `${'Chain'.padEnd(14)} ${'EID'.padEnd(8)} ${'Type'.padEnd(12)} ${'Operation'.padEnd(14)} ${'OFT Address'}`,
+    )
+    console.log('─'.repeat(95))
+
+    for (const chain of pyusd0Chains) {
+      console.log(
+        `${chain.name.padEnd(14)} ${chain.eid.toString().padEnd(8)} ${chain.oftType.padEnd(12)} ${'mint/burn'.padEnd(14)} ${chain.oftAddress}`,
+      )
     }
+
+    console.log('')
+    console.log(`Total: ${getSupportedChains().length} chains (${pyusdChains.length} PYUSD + ${pyusd0Chains.length} PYUSD0)`)
     console.log('')
   })

@@ -1,11 +1,247 @@
 {
-  "mainnet": [
-    "ethereum",
-    "arbitrum",
-    "polygon"
-  ],
-  "testnet": [
-    "sepolia",
-    "arbitrum-sepolia"
-  ]
+  "pyusd": {
+    "flow": {
+      "name": "flow",
+      "chainId": 747,
+      "eid": 30336,
+      "tokenAddress": "0x2aabea2058b5ac2d339b163c6ab6f2b6d53aabed",
+      "oftAddress": "0x2aabea2058b5ac2d339b163c6ab6f2b6d53aabed",
+      "oftType": "NativeOFT",
+      "decimals": 6,
+      "blockExplorer": "https://evm.flowscan.io",
+      "rpcUrl": "https://mainnet.evm.nodes.onflow.org",
+      "nativeCurrency": {
+        "symbol": "FLOW",
+        "cmcId": 4558,
+        "decimals": 18
+      }
+    },
+    "glue": {
+      "name": "glue",
+      "chainId": 1300,
+      "eid": 30342,
+      "tokenAddress": "0x1c7c36b193224d0f72454f2a178e3b98aaefe8a5",
+      "oftAddress": "0x1c7c36b193224d0f72454f2a178e3b98aaefe8a5",
+      "oftType": "NativeOFT",
+      "decimals": 6,
+      "blockExplorer": "https://explorer.glue.net",
+      "rpcUrl": "https://rpc.glue.net",
+      "nativeCurrency": {
+        "symbol": "GLUE",
+        "cgId": "glue",
+        "cmcId": 36045,
+        "decimals": 18
+      }
+    },
+    "ethereum": {
+      "name": "ethereum",
+      "chainId": 1,
+      "eid": 30101,
+      "tokenAddress": "0x6c3ea9036406852006290770bedfcaba0e23a0e8",
+      "oftAddress": "0xa2c323fe5a74adffad2bf3e007e36bb029606444",
+      "oftType": "OFTAdapter",
+      "decimals": 6,
+      "blockExplorer": "https://etherscan.io",
+      "rpcUrl": "https://go.getblock.io/aefd01aa907c4805ba3c00a9e5b48c6b",
+      "nativeCurrency": {
+        "name": "ETH",
+        "symbol": "ETH",
+        "cgId": "ethereum",
+        "cmcId": 1027,
+        "decimals": 18
+      }
+    },
+    "arbitrum": {
+      "name": "arbitrum",
+      "chainId": 42161,
+      "eid": 30110,
+      "tokenAddress": "0x46850ad61c2b7d64d08c9c754f45254596696984",
+      "oftAddress": "0xfab5891ed867a1195303251912013b92c4fc3a1d",
+      "oftType": "OFTAdapter",
+      "decimals": 6,
+      "blockExplorer": "https://arbiscan.io",
+      "rpcUrl": "https://arb-mainnet.g.alchemy.com/v2/KhVdIItVH0ttiQvBYYO5NPL-De-gLWoW",
+      "nativeCurrency": {
+        "name": "ETH",
+        "symbol": "ETH",
+        "cgId": "ethereum",
+        "cmcId": 1027,
+        "decimals": 18
+      }
+    }
+  },
+  "pyusd0": {
+    "polygon": {
+      "name": "polygon",
+      "chainId": 137,
+      "eid": 30109,
+      "tokenAddress": "0x99af3eea856556646c98c8b9b2548fe815240750",
+      "oftAddress": "0x26d27d5af2f6f1c14f40013c8619d97aaf015509",
+      "oftType": "ProxyOFT",
+      "decimals": 6,
+      "blockExplorer": "https://polygonscan.com",
+      "rpcUrl": "https://1rpc.io/matic",
+      "nativeCurrency": {
+        "name": "MATIC",
+        "symbol": "MATIC",
+        "cgId": "polygon-ecosystem-token",
+        "cmcId": 28321,
+        "decimals": 18
+      }
+    },
+    "ink": {
+      "name": "ink",
+      "chainId": 57073,
+      "eid": 30339,
+      "tokenAddress": "0x142cdc44890978b506e745bb3bd11607b7f7faef",
+      "oftAddress": "0x3cd2b89c49d130c08f1d683225b2e5deb63ff876",
+      "oftType": "ProxyOFT",
+      "decimals": 6,
+      "blockExplorer": "https://explorer.inkonchain.com",
+      "rpcUrl": "https://rpc-qnd.inkonchain.com",
+      "nativeCurrency": {
+        "symbol": "ETH",
+        "cgId": "ethereum",
+        "cmcId": 1027,
+        "decimals": 18
+      }
+    },
+    "sei": {
+      "name": "sei",
+      "chainId": 1329,
+      "eid": 30280,
+      "tokenAddress": "0x142cdc44890978b506e745bb3bd11607b7f7faef",
+      "oftAddress": "0x3cd2b89c49d130c08f1d683225b2e5deb63ff876",
+      "oftType": "ProxyOFT",
+      "decimals": 6,
+      "blockExplorer": "https://seitrace.com",
+      "rpcUrl": "https://evm-rpc.sei-apis.com",
+      "nativeCurrency": {
+        "symbol": "SEI",
+        "cgId": "sei-network",
+        "cmcId": 23149,
+        "decimals": 18
+      }
+    },
+    "fraxtal": {
+      "name": "fraxtal",
+      "chainId": 252,
+      "eid": 30255,
+      "tokenAddress": "0x99af3eea856556646c98c8b9b2548fe815240750",
+      "oftAddress": "0x26d27d5af2f6f1c14f40013c8619d97aaf015509",
+      "oftType": "ProxyOFT",
+      "decimals": 6,
+      "blockExplorer": "https://fraxscan.com",
+      "rpcUrl": "https://rpc.frax.com",
+      "nativeCurrency": {
+        "name": "FRAX",
+        "symbol": "FRAX",
+        "cgId": "frax-share",
+        "cmcId": 6953,
+        "decimals": 18
+      }
+    },
+    "stable": {
+      "name": "stable",
+      "chainId": 988,
+      "eid": 30396,
+      "tokenAddress": "0x99af3eea856556646c98c8b9b2548fe815240750",
+      "oftAddress": "0x26d27d5af2f6f1c14f40013c8619d97aaf015509",
+      "oftType": "ProxyOFT",
+      "decimals": 6,
+      "blockExplorer": "https://stablescan.xyz",
+      "rpcUrl": "https://rpc.stable.xyz",
+      "nativeCurrency": {
+        "symbol": "USDT",
+        "cmcId": 825,
+        "decimals": 18
+      }
+    },
+    "arbitrum": {
+      "name": "arbitrum",
+      "chainId": 42161,
+      "eid": 30110,
+      "tokenAddress": "0x46850ad61c2b7d64d08c9c754f45254596696984",
+      "oftAddress": "0x3cd2b89c49d130c08f1d683225b2e5deb63ff876",
+      "oftType": "ProxyOFT",
+      "decimals": 6,
+      "blockExplorer": "https://arbiscan.io",
+      "rpcUrl": "https://arb-mainnet.g.alchemy.com/v2/KhVdIItVH0ttiQvBYYO5NPL-De-gLWoW",
+      "nativeCurrency": {
+        "name": "ETH",
+        "symbol": "ETH",
+        "cgId": "ethereum",
+        "cmcId": 1027,
+        "decimals": 18
+      }
+    },
+    "codex": {
+      "name": "codex",
+      "chainId": 81224,
+      "eid": 30323,
+      "tokenAddress": "0x99af3eea856556646c98c8b9b2548fe815240750",
+      "oftAddress": "0x26d27d5af2f6f1c14f40013c8619d97aaf015509",
+      "oftType": "ProxyOFT",
+      "decimals": 6,
+      "blockExplorer": "https://explorer.codex.xyz",
+      "rpcUrl": "https://rpc.codex.xyz",
+      "nativeCurrency": {
+        "symbol": "ETH",
+        "cgId": "ethereum",
+        "cmcId": 1027,
+        "decimals": 18
+      }
+    },
+    "abstract": {
+      "name": "abstract",
+      "chainId": 2741,
+      "eid": 30324,
+      "tokenAddress": "0x142cdc44890978b506e745bb3bd11607b7f7faef",
+      "oftAddress": "0x3cd2b89c49d130c08f1d683225b2e5deb63ff876",
+      "oftType": "ProxyOFT",
+      "decimals": 6,
+      "blockExplorer": "https://abscan.org",
+      "rpcUrl": "https://abstract.drpc.org",
+      "nativeCurrency": {
+        "symbol": "ETH",
+        "cgId": "ethereum",
+        "cmcId": 1027,
+        "decimals": 18
+      }
+    },
+    "plumephoenix": {
+      "name": "plumephoenix",
+      "chainId": 98866,
+      "eid": 30370,
+      "tokenAddress": "0x142cdc44890978b506e745bb3bd11607b7f7faef",
+      "oftAddress": "0x3cd2b89c49d130c08f1d683225b2e5deb63ff876",
+      "oftType": "ProxyOFT",
+      "decimals": 6,
+      "blockExplorer": "https://phoenix-explorer.plumenetwork.xyz",
+      "rpcUrl": "https://rpc.plume.org",
+      "nativeCurrency": {
+        "symbol": "PLUME",
+        "cmcId": 35364,
+        "decimals": 18
+      }
+    },
+    "avalanche": {
+      "name": "avalanche",
+      "chainId": 43114,
+      "eid": 30106,
+      "tokenAddress": "0x142cdc44890978b506e745bb3bd11607b7f7faef",
+      "oftAddress": "0x3cd2b89c49d130c08f1d683225b2e5deb63ff876",
+      "oftType": "ProxyOFT",
+      "decimals": 6,
+      "blockExplorer": "https://snowscan.xyz",
+      "rpcUrl": "https://1rpc.io/avax/c",
+      "nativeCurrency": {
+        "name": "Avalanche Token",
+        "symbol": "AVAX",
+        "cgId": "avalanche-2",
+        "cmcId": 5805,
+        "decimals": 18
+      }
+    }
+  }
 }

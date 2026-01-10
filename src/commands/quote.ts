@@ -1,6 +1,6 @@
 import { Command } from '@commander-js/extra-typings'
 
-import { getChainConfig } from '../lib/chains'
+import { resolveChainConfigsForTransfer } from '../lib/chains'
 import { createPublicClientForChain } from '../lib/client'
 import { resolveAddress } from '../lib/input-validation'
 import { quoteSend } from '../lib/oft'
@@ -17,8 +17,7 @@ export const quoteCommand = new Command('quote')
   .option('--slippage <percent>', 'Slippage tolerance in percent', '0.5')
   .option('--gas <limit>', 'Gas limit for destination lzReceive', String(DEFAULT_GAS_LIMIT))
   .action(async (source, destination, amount, options) => {
-    const srcConfig = getChainConfig(source)
-    const dstConfig = getChainConfig(destination)
+    const { srcConfig, dstConfig } = resolveChainConfigsForTransfer(source, destination)
 
     // Resolve recipient address
     const recipientAddress = resolveAddress({ address: options.to })
@@ -26,20 +25,20 @@ export const quoteCommand = new Command('quote')
     // Prepare SendParam with all parameters
     const { sendParam, minAmountLD } = prepareSendParam({
       amount,
-      destination,
+      dstEid: dstConfig.eid,
       recipient: recipientAddress,
       slippage: options.slippage,
       gas: options.gas,
     })
 
-    const client = createPublicClientForChain(source)
+    const client = createPublicClientForChain(srcConfig)
 
     console.log('')
     console.log('PYUSD Transfer Quote')
     console.log('─'.repeat(50))
 
     try {
-      const quote = await quoteSend(client, srcConfig.pyusdAddress, sendParam)
+      const quote = await quoteSend(client, srcConfig.oftAddress, sendParam)
 
       console.log(`Source:         ${srcConfig.name} (EID: ${srcConfig.eid})`)
       console.log(`Destination:    ${dstConfig.name} (EID: ${dstConfig.eid})`)

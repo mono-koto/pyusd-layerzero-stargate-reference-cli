@@ -1,6 +1,5 @@
 import type { SendParam } from '../types/index'
 
-import { getChainConfig } from './chains'
 import { buildLzReceiveOptions } from './options'
 import { addressToBytes32 } from '../utils/address'
 import { calculateMinAmount, parseAmount } from '../utils/format'
@@ -13,7 +12,7 @@ import { calculateMinAmount, parseAmount } from '../utils/format'
  *
  * @param params - Transfer parameters
  * @param params.amount - Amount of tokens to send (as string, e.g., "100")
- * @param params.destination - Destination chain key (e.g., "arbitrum")
+ * @param params.dstEid - Destination LayerZero Endpoint ID
  * @param params.recipient - Recipient address on destination chain
  * @param params.slippage - Slippage tolerance as percentage string (e.g., "0.5")
  * @param params.gas - Gas limit for destination lzReceive (as string)
@@ -21,7 +20,7 @@ import { calculateMinAmount, parseAmount } from '../utils/format'
  */
 export function prepareSendParam(params: {
   amount: string
-  destination: string
+  dstEid: number
   recipient: `0x${string}`
   slippage: string
   gas: string
@@ -30,9 +29,6 @@ export function prepareSendParam(params: {
   amountLD: bigint
   minAmountLD: bigint
 } {
-  // Get destination chain configuration
-  const dstConfig = getChainConfig(params.destination)
-
   // Parse amount to local decimals (PYUSD uses 6 decimals)
   const amountLD = parseAmount(params.amount)
 
@@ -44,7 +40,7 @@ export function prepareSendParam(params: {
   const sendParam: SendParam = {
     amountLD,
     composeMsg: '0x',                             // No composition message (simple transfer)
-    dstEid: dstConfig.eid,                         // Destination LayerZero Endpoint ID
+    dstEid: params.dstEid,                         // Destination LayerZero Endpoint ID
     extraOptions: buildLzReceiveOptions(BigInt(params.gas)),  // Gas limit for lzReceive
     minAmountLD,                                   // Minimum to receive (slippage protection)
     oftCmd: '0x',                                  // No OFT command (simple transfer)

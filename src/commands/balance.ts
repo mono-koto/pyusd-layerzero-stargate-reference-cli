@@ -23,7 +23,7 @@ export const balanceCommand = new Command('balance')
     console.log('')
 
     try {
-      const tokenAddress = await getTokenAddress(client, chainConfig.pyusdAddress)
+      const tokenAddress = await getTokenAddress(client, chainConfig.oftAddress)
       const balance = await getBalance(client, tokenAddress, address)
       const formattedBalance = formatAmount(balance)
 

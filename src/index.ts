@@ -1,5 +1,5 @@
 // Re-export library functions for programmatic use
-export { getChainConfig, getSupportedChains, getViemChain, CHAIN_CONFIGS, isTestnet } from './lib/chains'
+export { getChainConfig, getSupportedChains, getViemChain, CHAIN_CONFIGS, getPyusdChains, getPyusd0Chains } from './lib/chains'
 export { createPublicClientForChain, createWalletClientForChain, getAddressFromPrivateKey } from './lib/client'
 export { getBalance, getTokenAddress, quoteSend, send, checkAndApprove } from './lib/oft'
 export { buildLzReceiveOptions, DEFAULT_GAS_LIMIT } from './lib/options'

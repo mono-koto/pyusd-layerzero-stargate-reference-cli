@@ -1,4 +1,4 @@
-import type {Address, Hex} from 'viem'
+import type { Address, Hex } from 'viem'
 
 // Chain configuration
 export interface ChainConfig {
@@ -9,10 +9,14 @@ export interface ChainConfig {
   name: string
   nativeCurrency: {
     decimals: number
-    name: string
+    name?: string
     symbol: string
   }
-  pyusdAddress: Address // PYUSD OFT/adapter contract
+  tokenAddress: Address // The ERC20 token users hold (PYUSD or PYUSD0)
+  oftAddress: Address // The OFT/ProxyOFT contract for bridging
+  oftType: 'OFTAdapter' | 'NativeOFT' | 'ProxyOFT' // Adapter=lock/unlock, NativeOFT=single contract, ProxyOFT=mint/burn
+  decimals: number
+  network: 'pyusd' | 'pyusd0' // Which bridge network this chain belongs to
   rpcUrl: string
 }
 

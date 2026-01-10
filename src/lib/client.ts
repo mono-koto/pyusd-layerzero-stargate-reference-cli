@@ -2,13 +2,15 @@ import {createPublicClient, createWalletClient, http, type PublicClient, type Wa
 import {privateKeyToAccount} from 'viem/accounts'
 
 import {getChainConfig, getViemChain} from './chains'
+import type {ChainConfig} from '../types'
 
 /**
- * Create a public client for reading from a chain
+ * Create a public client for reading from a chain.
+ * Accepts either a chain key string or a ChainConfig object.
  */
-export function createPublicClientForChain(chainKey: string): PublicClient {
-  const config = getChainConfig(chainKey)
-  const viemChain = getViemChain(chainKey)
+export function createPublicClientForChain(chainKeyOrConfig: string | ChainConfig): PublicClient {
+  const config = typeof chainKeyOrConfig === 'string' ? getChainConfig(chainKeyOrConfig) : chainKeyOrConfig
+  const viemChain = getViemChain(config.chainKey)
 
   return createPublicClient({
     chain: viemChain,
@@ -17,11 +19,12 @@ export function createPublicClientForChain(chainKey: string): PublicClient {
 }
 
 /**
- * Create a wallet client for signing transactions
+ * Create a wallet client for signing transactions.
+ * Accepts either a chain key string or a ChainConfig object.
  */
-export function createWalletClientForChain(chainKey: string, privateKey: `0x${string}`): WalletClient {
-  const config = getChainConfig(chainKey)
-  const viemChain = getViemChain(chainKey)
+export function createWalletClientForChain(chainKeyOrConfig: string | ChainConfig, privateKey: `0x${string}`): WalletClient {
+  const config = typeof chainKeyOrConfig === 'string' ? getChainConfig(chainKeyOrConfig) : chainKeyOrConfig
+  const viemChain = getViemChain(config.chainKey)
   const account = privateKeyToAccount(privateKey)
 
   return createWalletClient({

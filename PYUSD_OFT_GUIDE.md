@@ -32,12 +32,39 @@ LayerZero is a messaging protocol for cross-chain smart contract communication:
 
 ### OFT: Omnichain Fungible Token
 
-Two implementations exist:
+Three implementations exist:
 
 | Type | Use Case | Mechanism | Approval Needed |
 |------|----------|-----------|-----------------|
-| **OFT Adapter** | Wraps existing ERC-20 (PYUSD on Ethereum) | Lock on source, mint on destination | Yes |
-| **OFT** | Native implementation (PYUSD on other chains) | Burn on source, mint on destination | No |
+| **OFT Adapter** | Wraps existing ERC-20 (PYUSD on Ethereum/Arbitrum) | Lock on source, mint on destination | Yes |
+| **ProxyOFT** | Synthetic representation (PYUSD0 on Polygon, etc.) | Burn on source, mint on destination | Yes |
+| **NativeOFT** | Token IS the OFT (single contract) | Burn on source, mint on destination | No |
+
+### OFT Meshes
+
+An important concept: OFT contracts must be configured as "peers" to communicate. PYUSD is deployed across **two separate meshes**:
+
+**PYUSD Mesh:** Ethereum and Arbitrum use OFT Adapters that lock/unlock real PYUSD tokens. Transfers within this mesh move PYUSD between these chains.
+
+**PYUSD0 Mesh:** Polygon, Avalanche, Sei, and other chains use ProxyOFT contracts that mint/burn a synthetic "PYUSD0" representation. Transfers within this mesh move PYUSD0.
+
+**Arbitrum is special:** It exists in both meshes with different OFT contracts. This allows it to serve as a bridge—you can hold PYUSD on Arbitrum and send it to either Ethereum (via the PYUSD mesh) or Polygon (via the PYUSD0 mesh). The underlying token is the same; only the OFT contract used differs.
+
+### Route Validation
+
+Not all chain pairs support direct transfers. If you call `quoteSend()` for an invalid route, you'll get a `NoPeer(uint32)` error (selector `0xf6ff4fb7`). You can verify peer configuration on-chain:
+
+```bash
+# Check if Polygon's PYUSD0 has Ethereum as a peer
+cast call 0x26d27d5af2f6f1c14f40013c8619d97aaf015509 "peers(uint32)(bytes32)" 30101 --rpc-url https://polygon-rpc.com
+# Returns 0x000...000 (no peer) — transfer would fail
+
+# Check if Polygon's PYUSD0 has Arbitrum as a peer
+cast call 0x26d27d5af2f6f1c14f40013c8619d97aaf015509 "peers(uint32)(bytes32)" 30110 --rpc-url https://polygon-rpc.com
+# Returns 0x...3cd2b89c49d130c08f1d683225b2e5deb63ff876 (Arbitrum's PYUSD0) — valid route
+```
+
+When building a transfer workflow, your code should select the correct OFT contract based on which mesh contains the destination chain. For cross-mesh transfers (e.g., Polygon → Ethereum), users must perform a two-hop transfer through Arbitrum.
 
 ---
 

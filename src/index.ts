@@ -1,8 +1,47 @@
 // Re-export library functions for programmatic use
-export { getChainConfig, getSupportedChains, getViemChain, CHAIN_CONFIGS, getPyusdChains, getPyusd0Chains } from './lib/chains'
-export { createPublicClientForChain, createWalletClientForChain, getAddressFromPrivateKey } from './lib/client'
-export { getBalance, getTokenAddress, quoteSend, send, checkAndApprove } from './lib/oft'
-export { buildLzReceiveOptions, DEFAULT_GAS_LIMIT } from './lib/options'
-export { addressToBytes32, bytes32ToAddress } from './utils/address'
-export { formatAmount, parseAmount, formatNativeFee, calculateMinAmount } from './utils/format'
-export type { ChainConfig, SendParam, MessagingFee, QuoteResult } from './types/index'
+
+// Chain configuration
+export {
+  getChainConfig,
+  getSupportedChains,
+  getViemChain,
+  CHAIN_CONFIGS,
+  getPyusdChains,
+  getPyusd0Chains,
+  resolveChainConfigsForTransfer,
+} from './lib/chains'
+
+// Client utilities
+export {
+  createPublicClientForChain,
+  createWalletClientForChain,
+  getAddressFromPrivateKey,
+} from './lib/client'
+
+// Stargate API
+export {
+  fetchStargateQuote,
+  executeStargateTransfer,
+  isRouteSupported,
+  calculateMinAmount as calculateStargateMinAmount,
+} from './lib/stargate'
+
+// Formatting utilities
+export {
+  formatAmount,
+  parseAmount,
+  formatNativeFee,
+  calculateMinAmount,
+  truncateAddress,
+  PYUSD_DECIMALS,
+} from './utils/format'
+
+// Types
+export type { ChainConfig } from './types/index'
+export type {
+  StargateQuoteParams,
+  StargateQuote,
+  StargateQuoteResult,
+  StargateTransferResult,
+  StargateStep,
+} from './lib/stargate'

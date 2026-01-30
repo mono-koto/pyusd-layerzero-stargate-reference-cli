@@ -1,72 +1,105 @@
 import { Command } from '@commander-js/extra-typings'
 
-import { resolveChainConfigsForTransfer } from '../lib/chains'
-import { createPublicClientForChain } from '../lib/client'
+import { isEvmChain, resolveChainConfigsForTransfer } from '../lib/chains'
 import { resolveAddress } from '../lib/input-validation'
-import { quoteSend } from '../lib/oft'
-import { DEFAULT_GAS_LIMIT } from '../lib/options'
-import { prepareSendParam } from '../lib/send-preparation'
-import { formatAmount, formatNativeFee } from '../utils/format'
+import { fetchStargateQuote } from '../lib/stargate'
+import { formatAmount, parseAmount } from '../utils/format'
 
 export const quoteCommand = new Command('quote')
-  .description('Get a fee quote for a PYUSD cross-chain transfer')
-  .argument('<source>', 'Source chain (e.g., ethereum, arbitrum, polygon)')
+  .description('Get a fee quote for a PYUSD cross-chain transfer via Stargate')
+  .argument('<source>', 'Source chain (e.g., ethereum, arbitrum, avalanche)')
   .argument('<destination>', 'Destination chain')
   .argument('<amount>', 'Amount of PYUSD to transfer')
+  .option('--address <address>', 'Sender address (or use PRIVATE_KEY env var)')
   .option('--to <address>', 'Recipient address on destination chain (defaults to sender)')
   .option('--slippage <percent>', 'Slippage tolerance in percent', '0.5')
-  .option('--gas <limit>', 'Gas limit for destination lzReceive', String(DEFAULT_GAS_LIMIT))
   .action(async (source, destination, amount, options) => {
     const { srcConfig, dstConfig } = resolveChainConfigsForTransfer(source, destination)
 
-    // Resolve recipient address
-    const recipientAddress = resolveAddress({ address: options.to })
+    // Non-EVM chains require explicit address (can't derive from EVM private key)
+    if (!isEvmChain(srcConfig) && !options.address) {
+      console.error(`Error: --address is required for ${srcConfig.name}`)
+      console.error(`This CLI currently only supports EVM private keys.`)
+      process.exit(1)
+    }
 
-    // Prepare SendParam with all parameters
-    const { sendParam, minAmountLD } = prepareSendParam({
-      amount,
-      dstEid: dstConfig.eid,
-      recipient: recipientAddress,
-      slippage: options.slippage,
-      gas: options.gas,
-    })
+    // Resolve sender/recipient address (could be hex, base58, etc. depending on chain)
+    const senderAddress = options.address || resolveAddress({})
+    const recipientAddress = options.to || senderAddress
 
-    const client = createPublicClientForChain(srcConfig)
+    // Calculate amounts in base units
+    const amountLD = parseAmount(amount)
+    const slippagePercent = Number.parseFloat(options.slippage)
+    const slippageBps = Math.floor(slippagePercent * 100)
+    const minAmountLD = (amountLD * BigInt(10000 - slippageBps)) / BigInt(10000)
 
     console.log('')
-    console.log('PYUSD Transfer Quote')
+    console.log('PYUSD Transfer Quote (via Stargate)')
     console.log('─'.repeat(50))
+    console.log(`Source:         ${srcConfig.name} (${srcConfig.symbol})`)
+    console.log(`Destination:    ${dstConfig.name} (${dstConfig.symbol})`)
+    console.log(`Sender:         ${senderAddress}`)
+    console.log(`Recipient:      ${recipientAddress}`)
+    console.log(`Amount:         ${amount} ${srcConfig.symbol}`)
+    console.log('')
 
     try {
-      const quote = await quoteSend(client, srcConfig.oftAddress, sendParam)
-
-      console.log(`Source:         ${srcConfig.name} (EID: ${srcConfig.eid})`)
-      console.log(`Destination:    ${dstConfig.name} (EID: ${dstConfig.eid})`)
-      console.log(`Recipient:      ${recipientAddress}`)
-      console.log(`Amount:         ${amount} PYUSD`)
+      // Fetch quote from Stargate API
+      console.log('Fetching quote from Stargate...')
       console.log('')
-      console.log('Fees')
-      console.log('─'.repeat(50))
-      console.log(`LayerZero Fee:  ${formatNativeFee(quote.messagingFee.nativeFee, srcConfig.nativeCurrency.symbol)}`)
 
-      if (quote.feeDetails.length > 0) {
-        for (const fee of quote.feeDetails) {
-          console.log(`Protocol Fee:   ${formatAmount(fee.feeAmountLD)} PYUSD (${fee.description})`)
-        }
+      const quoteResult = await fetchStargateQuote({
+        srcToken: srcConfig.tokenAddress,
+        dstToken: dstConfig.tokenAddress,
+        srcAddress: senderAddress,
+        dstAddress: recipientAddress,
+        srcChainKey: srcConfig.chainKey,
+        dstChainKey: dstConfig.chainKey,
+        srcAmount: amountLD.toString(),
+        dstAmountMin: minAmountLD.toString(),
+      })
+
+      if (quoteResult.error) {
+        console.error('─'.repeat(50))
+        console.error(`Error: ${quoteResult.error}`)
+        console.error('')
+        process.exit(1)
       }
 
-      console.log('')
-      console.log('Amounts')
-      console.log('─'.repeat(50))
-      console.log(`Amount Sent:     ${formatAmount(quote.receipt.amountSentLD)} PYUSD`)
-      console.log(`Amount Received: ${formatAmount(quote.receipt.amountReceivedLD)} PYUSD`)
-      console.log(`Min Received:    ${formatAmount(minAmountLD)} PYUSD (${options.slippage}% slippage)`)
+      if (!quoteResult.bestQuote) {
+        console.error('─'.repeat(50))
+        console.error('Error: No quote available')
+        console.error('')
+        process.exit(1)
+      }
 
-      console.log('')
-      console.log('Limits')
+      const quote = quoteResult.bestQuote
+
+      // Display quote details
+      console.log('Quote Details')
       console.log('─'.repeat(50))
-      console.log(`Min Transfer:   ${formatAmount(quote.limit.minAmountLD)} PYUSD`)
-      console.log(`Max Transfer:   ${formatAmount(quote.limit.maxAmountLD)} PYUSD`)
+
+      // Parse amounts from quote response
+      const srcAmountDisplay = formatAmount(BigInt(quote.srcAmount))
+      const dstAmountDisplay = formatAmount(BigInt(quote.dstAmount))
+      const minAmountDisplay = formatAmount(minAmountLD)
+
+      console.log(`Send Amount:     ${srcAmountDisplay} ${srcConfig.symbol}`)
+      console.log(`Receive Amount:  ${dstAmountDisplay} ${dstConfig.symbol}`)
+      console.log(`Min Receive:     ${minAmountDisplay} ${dstConfig.symbol} (${options.slippage}% slippage)`)
+
+      // Calculate and display fee
+      const srcAmountBigInt = BigInt(quote.srcAmount)
+      const dstAmountBigInt = BigInt(quote.dstAmount)
+      const feeBigInt = srcAmountBigInt - dstAmountBigInt
+
+      if (feeBigInt > 0n) {
+        const feePercent = (Number(feeBigInt) / Number(srcAmountBigInt)) * 100
+        console.log(`Protocol Fee:    ${formatAmount(feeBigInt)} ${srcConfig.symbol} (${feePercent.toFixed(3)}%)`)
+      } else {
+        console.log(`Protocol Fee:    0 ${srcConfig.symbol} (zero fee)`)
+      }
+
       console.log('')
     } catch (error) {
       if (error instanceof Error) {

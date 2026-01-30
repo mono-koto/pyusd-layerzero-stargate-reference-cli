@@ -6,22 +6,21 @@ import type { ChainConfig } from '../types/index'
 function printChainTable(title: string, chains: ChainConfig[]): void {
   console.log('')
   console.log(title)
-  console.log('─'.repeat(95))
+  console.log('─'.repeat(80))
   console.log(
-    `${'Chain'.padEnd(14)} ${'EID'.padEnd(8)} ${'Type'.padEnd(12)} ${'Operation'.padEnd(14)} ${'OFT Address'}`,
+    `${'Chain'.padEnd(16)} ${'Chain ID'.padEnd(10)} ${'Token Address'}`,
   )
-  console.log('─'.repeat(95))
+  console.log('─'.repeat(80))
 
   for (const chain of chains) {
-    const operation = chain.oftType === 'OFTAdapter' ? 'lock/unlock' : 'mint/burn'
     console.log(
-      `${chain.name.padEnd(14)} ${chain.eid.toString().padEnd(8)} ${chain.oftType.padEnd(12)} ${operation.padEnd(14)} ${chain.oftAddress}`,
+      `${chain.chainKey.padEnd(16)} ${chain.chainId.toString().padEnd(10)} ${chain.tokenAddress}`,
     )
   }
 }
 
 export const chainsCommand = new Command('chains')
-  .description('List all chains where PYUSD/PYUSD0 is available via LayerZero')
+  .description('List all chains where PYUSD/PYUSD0 is bridgeable via Stargate')
   .option('-f, --format <format>', 'Output format (table or json)', 'table')
   .action((options) => {
     const pyusdChains = getPyusdChains()
@@ -33,10 +32,12 @@ export const chainsCommand = new Command('chains')
     }
 
     // Table format
-    printChainTable('PYUSD Chains', pyusdChains)
-    printChainTable('PYUSD0 Chains', pyusd0Chains)
+    printChainTable('PYUSD Chains (Native PayPal USD)', pyusdChains)
+    printChainTable('PYUSD0 Chains (Synthetic via Stargate Hydra)', pyusd0Chains)
 
     console.log('')
     console.log(`Total: ${getSupportedChains().length} chains (${pyusdChains.length} PYUSD + ${pyusd0Chains.length} PYUSD0)`)
+    console.log('')
+    console.log('To update chain data: npm run cli update-chains')
     console.log('')
   })

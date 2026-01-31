@@ -6,7 +6,9 @@ A CLI tool implementing all [PYUSD and PYUSD0 cross-chain transfers via LayerZer
 
 Transfer PYUSD/PYUSD0 across chains using the Stargate Finance API. Zero slippage, 1:1 rate.
 
-**See [PYUSD_STARGATE_GUIDE.md](./PYUSD_STARGATE_GUIDE.md) for a technical guide with code examples.**
+**Developer Guides:**
+- [PYUSD_STARGATE_DEV_GUIDE.md](./PYUSD_STARGATE_DEV_GUIDE.md) — Technical guide with code examples for PYUSD transfers
+- [PYUSD0_DEV_SUPPLEMENT.md](./PYUSD0_DEV_SUPPLEMENT.md) — PYUSD0 mesh network transfers (Ink, Plume, Avalanche, etc.)
 
 ## Supported Chains
 

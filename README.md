@@ -51,7 +51,7 @@ PRIVATE_KEY=op://vault/item/evm-key
 SOLANA_PRIVATE_KEY=op://vault/item/solana-key
 
 # Run commands with op
-op run --env-file=.env -- npm run cli transfer solana arbitrum 10
+op run --env-file=.env -- npm run cli transfer solana ethereum 10
 ```
 
 ## Usage
@@ -84,7 +84,7 @@ npm run cli transfer arbitrum avalanche 100 --dry-run
 npm run cli transfer arbitrum avalanche 100
 
 # Execute Solana transfer (requires SOLANA_PRIVATE_KEY)
-npm run cli transfer solana arbitrum 100
+npm run cli transfer solana ethereum 100
 ```
 
 ### Update Chain Data
@@ -95,13 +95,20 @@ npm run cli update-chains
 
 ## Routing Notes
 
-- **PYUSD ↔ PYUSD**: Ethereum, Arbitrum, and Solana can transfer to each other
-- **PYUSD → PYUSD0**: Arbitrum can transfer to any PYUSD0 chain directly
-- **PYUSD0 ↔ PYUSD0**: All PYUSD0 chains can transfer to each other directly (mesh network)
+**EVM Routes:**
+- **Ethereum ↔ Arbitrum**: Direct transfers supported
+- **Arbitrum ↔ PYUSD0 chains**: Direct transfers to Avalanche, Sei, Ink, Abstract, Plume, etc.
+- **PYUSD0 ↔ PYUSD0**: All PYUSD0 chains can transfer to each other (mesh network)
 - **Ethereum → PYUSD0**: Requires two hops (Ethereum → Arbitrum → destination)
-- **Solana → PYUSD0**: Routes through the Stargate API mesh network
 
-The Stargate API handles routing automatically. If a direct route isn't available, the CLI will suggest the required hops.
+**Solana Routes:**
+- **Solana ↔ Ethereum**: Direct transfers supported
+- **Solana ↔ Arbitrum**: Not yet available in Stargate API
+- **Solana → PYUSD0 chains**: Not yet available
+
+**Solana Requirements:**
+- Sender must have a PYUSD token account (ATA) on Solana
+- The `--address` flag is required (Solana addresses cannot be derived from EVM keys)
 
 ## Commands
 

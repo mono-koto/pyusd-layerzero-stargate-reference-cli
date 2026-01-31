@@ -7,7 +7,7 @@ A guide to transferring PYUSD across chains using the Stargate Finance API.
 PYUSD (PayPal USD) is available on multiple chains. Stargate Finance provides a simple API for cross-chain transfers with zero slippage.
 
 **Two token types:**
-- **PYUSD** - Native PayPal USD on Ethereum and Arbitrum
+- **PYUSD** - Native PayPal USD on Ethereum, Arbitrum, and Solana
 - **PYUSD0** - Synthetic representation on Avalanche, Sei, Ink, Abstract, Plume
 
 ## How It Works
@@ -65,6 +65,7 @@ https://layerzeroscan.com/tx/{bridgeTxHash}
 |-------|---------|
 | Ethereum | `0x6c3ea9036406852006290770bedfcaba0e23a0e8` |
 | Arbitrum | `0x46850ad61c2b7d64d08c9c754f45254596696984` |
+| Solana | `2b1kV6DkPAnxd5ixfnxCpjxmKwqjjaYmCZfHsFu24GXo` |
 
 ### PYUSD0
 | Chain | Address |
@@ -77,13 +78,22 @@ https://layerzeroscan.com/tx/{bridgeTxHash}
 
 ## Supported Routes
 
-**Direct routes:**
+**EVM Direct Routes:**
 - Ethereum ↔ Arbitrum
 - Arbitrum ↔ Avalanche, Sei, Ink, Abstract, Plume
-- Avalanche ↔ Sei ↔ Ink ↔ Abstract ↔ Plume
+- Avalanche ↔ Sei ↔ Ink ↔ Abstract ↔ Plume (mesh network)
+
+**Solana Routes:**
+- Solana ↔ Ethereum (direct)
+- Solana ↔ Arbitrum: *Not yet available*
+- Solana → PYUSD0 chains: *Not yet available*
 
 **Two-hop routes (via Arbitrum):**
 - Ethereum → PYUSD0 chains: Go through Arbitrum first
+
+**Solana Requirements:**
+- Sender must have an initialized PYUSD token account (ATA)
+- Use `--address` flag to specify the Solana wallet address
 
 ## Complete Example
 
@@ -178,6 +188,18 @@ npm run cli transfer arbitrum avalanche 100
 # Dry run
 npm run cli transfer arbitrum avalanche 100 --dry-run
 ```
+
+### Solana Transfers
+
+```bash
+# Get quote for Solana → Ethereum
+npm run cli quote solana ethereum 10 --address <solana-address> --to <eth-address>
+
+# Transfer (requires SOLANA_PRIVATE_KEY env var)
+npm run cli transfer solana ethereum 10 --to <eth-address>
+```
+
+**Note:** Solana currently only supports direct routes to/from Ethereum. Routes to Arbitrum and PYUSD0 chains are not yet available in the Stargate API.
 
 ## Resources
 

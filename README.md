@@ -6,7 +6,7 @@ A CLI tool for cross-chain PYUSD transfers via Stargate Finance.
 
 Transfer PYUSD/PYUSD0 across chains using the Stargate Finance API. Zero slippage, 1:1 rate.
 
-**See [PYUSD_OFT_GUIDE.md](./PYUSD_OFT_GUIDE.md) for a technical guide with code examples.**
+**See [PYUSD_STARGATE_GUIDE.md](./PYUSD_STARGATE_GUIDE.md) for a technical guide with code examples.**
 
 ## Supported Chains
 
@@ -36,11 +36,6 @@ PRIVATE_KEY=0x...
 
 # Required for Solana transfers (base58 or hex format)
 SOLANA_PRIVATE_KEY=...
-
-# Optional: Custom RPC endpoints
-RPC_ETHEREUM=https://...
-RPC_ARBITRUM=https://...
-RPC_SOLANA=https://...
 ```
 
 **Using 1Password:** If your private keys are stored in 1Password, use `op run`:
@@ -53,6 +48,26 @@ SOLANA_PRIVATE_KEY=op://vault/item/solana-key
 # Run commands with op
 op run --env-file=.env -- npm run cli transfer solana ethereum 10
 ```
+
+### Custom RPC Endpoints
+
+The CLI uses public RPC endpoints by default, which may be rate-limited or unreliable. For production use, configure custom RPCs:
+
+```bash
+# Format: RPC_<CHAIN_NAME_UPPERCASE>=<url>
+RPC_ETHEREUM=https://eth-mainnet.g.alchemy.com/v2/your-key
+RPC_ARBITRUM=https://arb-mainnet.g.alchemy.com/v2/your-key
+RPC_AVALANCHE=https://api.avax.network/ext/bc/C/rpc
+RPC_POLYGON=https://polygon-mainnet.g.alchemy.com/v2/your-key
+RPC_SOLANA=https://api.mainnet-beta.solana.com
+```
+
+**Supported chains:** Any chain can have a custom RPC. Use the chain name in uppercase (e.g., `RPC_SEI`, `RPC_INK`, `RPC_FRAXTAL`).
+
+**Recommended providers:**
+- [Alchemy](https://alchemy.com) - Ethereum, Arbitrum, Polygon, Solana
+- [Infura](https://infura.io) - Ethereum, Arbitrum, Polygon, Avalanche
+- [QuickNode](https://quicknode.com) - All major chains
 
 ## Usage
 

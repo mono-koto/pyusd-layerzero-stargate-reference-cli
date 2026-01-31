@@ -110,6 +110,13 @@ function formatStatus(status: string): string {
   return statusIndicators[status] || status
 }
 
-function formatTimestamp(unixTimestamp: number): string {
-  return new Date(unixTimestamp * 1000).toLocaleString()
+function formatTimestamp(unixTimestamp: number | undefined): string {
+  if (!unixTimestamp) {
+    return '(pending)'
+  }
+  const date = new Date(unixTimestamp * 1000)
+  if (isNaN(date.getTime())) {
+    return '(pending)'
+  }
+  return date.toLocaleString()
 }
